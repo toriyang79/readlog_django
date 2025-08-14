@@ -1,0 +1,147 @@
+# ============================
+# ui_components.py  (공용 UI: 포스트 카드)
+# ============================
+import streamlit as st
+
+def _get(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            val = row[key]
+        elif isinstance(row, dict):
+            val = row.get(key, default)
+        else:
+            val = default
+    except Exception:
+        val = default
+    return default if val is None else val
+
+def ui_post_card(row, key_prefix: str = "card"):
+    from models import toggle_like, do_repost, list_comments, add_comment, add_notification
+
+    nickname = _get(row, "nickname", "익명")
+    profile_img = _get(row, "profile_image", None)
+    created_at = _get(row, "created_at", "")
+    book_title = _get(row, "book_title", "")
+    book_author = _get(row, "book_author", "")
+    user_photo_url = _get(row, "user_photo_url", None)
+    book_cover_snapshot = _get(row, "book_cover_url_snapshot", None)
+    text = _get(row, "text", "")
+    like_count = _get(row, "like_count", 0)
+    repost_count = _get(row, "repost_count", 0)
+    post_id = _get(row, "id", None)
+    author_user_id = _get(row, "user_id", None)
+
+    # key 생성기 (접두어 + 컴포넌트명 + post_id)
+    def k(name: str) -> str:
+        return f"{key_prefix}_{name}_{post_id}"
+
+    st.markdown("---")
+
+    # 상단 메타(프로필)
+    meta_l, meta_r = st.columns([1, 5])
+    with meta_l:
+        if profile_img:
+            st.image(profile_img, width=48)
+        st.caption(f"{nickname}")
+    with meta_r:
+        # ✅ 제목/작가 크게 표시 (중앙 정렬)
+        if book_title or book_author:
+            st.markdown(
+                f"<h2 style='text-align:center;margin:0.2rem 0 0.6rem 0;'>{book_title} | 작가: {book_author}</h2>",
+                unsafe_allow_html=True,
+            )
+        if created_at:
+            st.caption(created_at)
+
+    # ✅ 페이지 전환: 버튼 2개를 중앙에 '붙여서' 배치
+    page_key = k("page_mode")
+    if page_key not in st.session_state:
+        st.session_state[page_key] = "photo"
+
+    # 바깥에서 가운데 정렬 영역 만들기
+    wrap_l, wrap_c, wrap_r = st.columns([3, 4, 3])
+    with wrap_c:
+        btn_l, btn_r = st.columns([1, 1])
+        with btn_l:
+            if st.button("📷 사진", key=k("btn_photo"), use_container_width=True):
+                st.session_state[page_key] = "photo"
+        with btn_r:
+            if st.button("📚 책 표지", key=k("btn_cover"), use_container_width=True):
+                st.session_state[page_key] = "cover"
+
+    page_mode = st.session_state[page_key]
+
+    # ✅ 이미지 표시 (가운데 정렬 + 크기 고정)
+    if page_mode == "photo":
+        if user_photo_url:
+            c1, c2, c3 = st.columns([1, 2, 1])   # 가운데 컬럼에만 이미지 출력
+            with c2:
+                st.image(user_photo_url, width=400)  # 사진 400px
+        else:
+            st.info("사진이 없어요.")
+    else:
+        if book_cover_snapshot:
+            c1, c2, c3 = st.columns([1, 2, 1])
+            with c2:
+                st.image(book_cover_snapshot, width=200)  # 표지 200px
+        else:
+            st.info("책 표지 없음")
+
+    # ✅ 닉네임(볼드) 다음에 텍스트 (좋아요 위)
+    if text or nickname:
+        st.markdown(f"**{nickname}** {text if text else ''}")
+
+    # 액션 버튼
+    a1, a2, _, _ = st.columns(4)
+    with a1:
+        if st.button(f"📖 BookLike {like_count}", key=k("like")):
+            if not st.session_state.get("user"):
+                st.warning("로그인 후 이용 가능합니다.")
+            else:
+                liked = toggle_like(st.session_state.user["id"], post_id)
+                if liked:
+                    add_notification(
+                        to_user_id=author_user_id,
+                        notif_type="like",
+                        from_user_id=st.session_state.user["id"],
+                        post_id=post_id,
+                    )
+                st.rerun()
+    with a2:
+        if st.button(f"📢 BookUp {repost_count}", key=k("repost")):
+            if not st.session_state.get("user"):
+                st.warning("로그인 후 이용 가능합니다.")
+            else:
+                new_re = do_repost(st.session_state.user["id"], post_id)
+                if new_re:
+                    add_notification(
+                        to_user_id=author_user_id,
+                        notif_type="repost",
+                        from_user_id=st.session_state.user["id"],
+                        post_id=post_id,
+                    )
+                st.rerun()
+
+    # 댓글
+    with st.expander("💬 댓글 보기/쓰기"):
+        comments = list_comments(post_id) or []
+        for c in comments:
+            cnick = c["nickname"] if "nickname" in c.keys() else "익명"
+            ctext = c["text"] if "text" in c.keys() else ""
+            st.markdown(f"**{cnick}**: {ctext}")
+
+        if st.session_state.get("user"):
+            new_c = st.text_input("댓글 입력", key=k("comment_input"))
+            if st.button("등록", key=k("comment_btn")):
+                ctext = (new_c or "").strip()
+                if ctext:
+                    add_comment(st.session_state.user["id"], post_id, ctext)
+                    add_notification(
+                        to_user_id=author_user_id,
+                        notif_type="comment",
+                        from_user_id=st.session_state.user["id"],
+                        post_id=post_id,
+                    )
+                    st.rerun()
+        else:
+            st.info("로그인 후 댓글을 작성할 수 있어요.")
