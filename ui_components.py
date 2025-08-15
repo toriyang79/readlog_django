@@ -1,7 +1,30 @@
 # ============================
 # ui_components.py  (공용 UI: 포스트 카드)
 # ============================
+# ui_components.py
 import streamlit as st
+import os
+from PIL import Image
+
+def _safe_show_image(src: str, width: int):
+    """로컬 경로/URL 모두 안전하게 표시"""
+    if not src:
+        st.info("이미지 파일이 없어요.")
+        return
+    src = src.replace("\\", "/")  # 윈도우 경로 대비
+    try:
+        if src.startswith(("http://", "https://")):
+            st.image(src, width=width)
+            return
+        if os.path.exists(src):
+            img = Image.open(src)
+            st.image(img, width=width)
+        else:
+            st.info(f"이미지 파일을 찾을 수 없어요: {src}")
+    except Exception as e:
+        st.warning(f"이미지를 표시하는 중 문제가 생겼어요: {e}")
+
+
 
 def _get(row, key, default=None):
     try:
