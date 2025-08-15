@@ -67,7 +67,7 @@ def ui_post_card(row, key_prefix: str = "card"):
         # ✅ 제목/작가: h2(요청), 중앙 정렬
         if book_title or book_author:
             st.markdown(
-                f"<h2 style='text-align:center;margin:0.2rem 0 0.6rem 0;font-weight:700;'>{book_title} | 작가: {book_author}</h2>",
+                f"<h3 style='text-align:center;margin:0.2rem 0 0.6rem 0;font-weight:700;'>{book_title} | 작가: {book_author}</h3>",
                 unsafe_allow_html=True,
             )
         if created_at:
@@ -102,7 +102,7 @@ def ui_post_card(row, key_prefix: str = "card"):
         if book_cover_snapshot:
             c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
-                _safe_show_image(book_cover_snapshot, width=150)  # 표지 300px
+                _safe_show_image(book_cover_snapshot, width=200)  # 표지 300px
         else:
             st.info("책 표지 없음")
 
