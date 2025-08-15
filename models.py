@@ -15,6 +15,14 @@ def create_user(email, password, nickname):
         )
     conn.close()
 
+def get_user_by_id(user_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE id=?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
 def get_user_by_email(email):
     conn = get_conn()
     cur = conn.cursor()

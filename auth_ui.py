@@ -1,91 +1,109 @@
+# ============================
 # auth_ui.py
+# ============================
+import os
 import streamlit as st
 from streamlit_cookies_manager import EncryptedCookieManager
 
+from utils import hash_password
 from models import (
     get_user_by_email,
+    get_user_by_id,                 # ✅ 쿠키 복원용
     create_user,
     unread_notifications_count,
     mark_all_notifications_read,
 )
-from utils import hash_password  # 로그인 검증에 사용
 
-
-def ui_auth():
-    # ===== 쿠키 매니저 (암호화) =====
-    cookies = EncryptedCookieManager(
-        prefix="readlog_",  # 쿠키 키 접두사
-        # 안전하게 하려면 st.secrets 또는 환경변수로 관리하세요.
-        password=st.secrets.get("COOKIE_PASSWORD", "readlog-dev-cookie-secret"),
+# ----------------------------
+# 🔐 암호화 쿠키 매니저 (전역 1개)
+# ----------------------------
+def _cookie_password() -> str:
+    # 환경변수 > st.secrets > 기본값
+    return os.getenv("COOKIE_PASSWORD") or getattr(st, "secrets", {}).get(
+        "COOKIE_PASSWORD", "readlog_dev_secret"
     )
-    if not cookies.ready():
-        # 초기 로드 타이밍 문제 방지 (필수)
-        st.stop()
 
-    # ===== 세션 기본값 =====
+cookies = EncryptedCookieManager(prefix="readlog_", password=_cookie_password())
+if not cookies.ready():
+    # 초기 로드 타이밍 문제 회피
+    st.stop()
+
+# ----------------------------
+# 공용: 세션에 유저 dict 넣는 도우미
+# ----------------------------
+def _set_session_user(row):
+    st.session_state.user = {
+        "id": row["id"],
+        "email": row["email"],
+        "nickname": row["nickname"],
+        "profile_image": row["profile_image"],
+    }
+
+# ----------------------------
+# UI
+# ----------------------------
+def ui_auth():
+    # 세션 기본값
     st.session_state.setdefault("user", None)
     st.session_state.setdefault("unread_count", 0)
 
-    # ===== 쿠키로 자동 로그인 복원 =====
-    # 브라우저 새로고침/재접속 시 쿠키에 저장된 이메일을 이용해 세션 복원
+    # 1) 🔁 쿠키(user_id)로 자동 로그인 복원
     if st.session_state.user is None:
-        cookie_email = cookies.get("user_email")
-        if cookie_email:
-            row = get_user_by_email(cookie_email)
-            if row:
-                st.session_state.user = {
-                    "id": row["id"],
-                    "email": row["email"],
-                    "nickname": row["nickname"],
-                    "profile_image": row["profile_image"],
-                }
+        uid = cookies.get("user_id")
+        if uid:
+            try:
+                row = get_user_by_id(int(uid))
+                if row:
+                    _set_session_user(row)
+            except Exception:
+                pass
 
+    # 사이드바 UI
     st.sidebar.header("🔐 로그인/회원가입")
 
-    # ===== 이미 로그인된 경우 =====
+    # 2) 이미 로그인된 상태
     if st.session_state.user:
         me = st.session_state.user
         st.sidebar.success(f"안녕하세요, {me['nickname']}님!")
 
         # 알림 배지
-        st.session_state.unread_count = unread_notifications_count(me["id"]) or 0
+        try:
+            st.session_state.unread_count = unread_notifications_count(me["id"]) or 0
+        except Exception:
+            st.session_state.unread_count = 0
+
         if st.session_state.unread_count:
             if st.sidebar.button(f"🔔 알림({st.session_state.unread_count}) 확인"):
                 mark_all_notifications_read(me["id"])
                 st.session_state.unread_count = 0
                 st.rerun()
 
-        # 로그아웃 → 세션/쿠키 모두 제거
+        # 로그아웃: 세션/쿠키 모두 제거
         if st.sidebar.button("로그아웃"):
             st.session_state.user = None
-            cookies.delete("user_email")
+            cookies.pop("user_id", None)
             cookies.save()
+            st.success("로그아웃되었습니다.")
             st.rerun()
 
         st.sidebar.divider()
-        return  # 로그인 상태면 여기서 종료
+        return  # 로그인 상태면 끝
 
-    # ===== 로그인/회원가입 탭 (비로그인 시) =====
+    # 3) 비로그인 상태 → 로그인/회원가입 탭
     tab_login, tab_signup = st.sidebar.tabs(["로그인", "회원가입"])
 
     # 로그인 탭
     with tab_login:
         email = st.text_input("이메일", key="login_email")
         pw = st.text_input("비밀번호", type="password", key="login_pw")
-        if st.button("로그인"):
+        if st.button("로그인", type="primary"):
             row = get_user_by_email(email)
             if row and row["password_hash"] == hash_password(pw):
                 # 세션 저장
-                st.session_state.user = {
-                    "id": row["id"],
-                    "email": row["email"],
-                    "nickname": row["nickname"],
-                    "profile_image": row["profile_image"],
-                }
-                # ✅ 쿠키 저장 (브라우저 새로고침/재실행에도 유지)
-                cookies["user_email"] = row["email"]
+                _set_session_user(row)
+                # ✅ 쿠키에 user_id 저장 → 새로고침/재접속 유지
+                cookies["user_id"] = str(row["id"])
                 cookies.save()
-
                 st.success("로그인 성공!")
                 st.rerun()
             else:
