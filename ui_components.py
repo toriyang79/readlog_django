@@ -102,7 +102,7 @@ def ui_post_card(row, key_prefix: str = "card"):
         if book_cover_snapshot:
             c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
-                _safe_show_image(book_cover_snapshot, width=300)  # 표지 300px
+                _safe_show_image(book_cover_snapshot, width=150)  # 표지 300px
         else:
             st.info("책 표지 없음")
 
