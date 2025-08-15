@@ -18,17 +18,28 @@ def _get(row, key, default=None):
     return default if val is None else val
 
 # ✅ 로컬 경로/URL 모두 안전하게 표시 (경로 깨짐, 읽기 실패 방지)
-def _safe_show_image(src: str, width: int):
+def _safe_show_image(src: str, width: int, center: bool = True):
+    """로컬 경로/URL 모두 안전하게 표시 (URL은 완전 중앙정렬)"""
     if not src:
         st.info("이미지 파일이 없어요.")
         return
-    src = str(src).replace("\\", "/")  # 윈도우 경로 보정
+    src = str(src).replace("\\", "/")
     try:
         if src.startswith(("http://", "https://")):
-            st.image(src, width=width)
+            if center:
+                # ✅ URL 이미지를 HTML로 가운데 정렬
+                st.markdown(
+                    f"<p style='text-align:center; margin:0;'><img src='{src}' width='{width}'></p>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.image(src, width=width)
             return
+        # 로컬 파일
         if os.path.exists(src):
             with Image.open(src) as img:
+                # st.image는 좌측 정렬되므로, 중앙정렬이 필요하면
+                # 바깥에서 columns([1,2,1])로 감싸 호출하세요.
                 st.image(img, width=width)
         else:
             st.info(f"이미지 파일을 찾을 수 없어요: {src}")
