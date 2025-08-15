@@ -47,7 +47,7 @@ def page_create_post():
             st.image(
                 selected_book["cover_url"],
                 caption=f"책 표지 미리보기: {selected_book['title']}",
-                use_column_width=True,
+                use_container_width=True,
             )
         else:
             st.info("표지 이미지가 없는 도서예요.")
