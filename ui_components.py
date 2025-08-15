@@ -1,30 +1,9 @@
 # ============================
 # ui_components.py  (공용 UI: 포스트 카드)
 # ============================
-# ui_components.py
 import streamlit as st
 import os
 from PIL import Image
-
-def _safe_show_image(src: str, width: int):
-    """로컬 경로/URL 모두 안전하게 표시"""
-    if not src:
-        st.info("이미지 파일이 없어요.")
-        return
-    src = src.replace("\\", "/")  # 윈도우 경로 대비
-    try:
-        if src.startswith(("http://", "https://")):
-            st.image(src, width=width)
-            return
-        if os.path.exists(src):
-            img = Image.open(src)
-            st.image(img, width=width)
-        else:
-            st.info(f"이미지 파일을 찾을 수 없어요: {src}")
-    except Exception as e:
-        st.warning(f"이미지를 표시하는 중 문제가 생겼어요: {e}")
-
-
 
 def _get(row, key, default=None):
     try:
@@ -37,6 +16,24 @@ def _get(row, key, default=None):
     except Exception:
         val = default
     return default if val is None else val
+
+# ✅ 로컬 경로/URL 모두 안전하게 표시 (경로 깨짐, 읽기 실패 방지)
+def _safe_show_image(src: str, width: int):
+    if not src:
+        st.info("이미지 파일이 없어요.")
+        return
+    src = str(src).replace("\\", "/")  # 윈도우 경로 보정
+    try:
+        if src.startswith(("http://", "https://")):
+            st.image(src, width=width)
+            return
+        if os.path.exists(src):
+            with Image.open(src) as img:
+                st.image(img, width=width)
+        else:
+            st.info(f"이미지 파일을 찾을 수 없어요: {src}")
+    except Exception as e:
+        st.warning(f"이미지를 표시하는 중 문제가 생겼어요: {e}")
 
 def ui_post_card(row, key_prefix: str = "card"):
     from models import toggle_like, do_repost, list_comments, add_comment, add_notification
@@ -64,24 +61,23 @@ def ui_post_card(row, key_prefix: str = "card"):
     meta_l, meta_r = st.columns([1, 5])
     with meta_l:
         if profile_img:
-            st.image(profile_img, width=48)
+            _safe_show_image(profile_img, width=48)
         st.caption(f"{nickname}")
     with meta_r:
-        # ✅ 제목/작가 크게 표시 (중앙 정렬)
+        # ✅ 제목/작가: h2(요청), 중앙 정렬
         if book_title or book_author:
             st.markdown(
-                f"<h2 style='text-align:center;margin:0.2rem 0 0.6rem 0;'>{book_title} | 작가: {book_author}</h2>",
+                f"<h2 style='text-align:center;margin:0.2rem 0 0.6rem 0;font-weight:700;'>{book_title} | 작가: {book_author}</h2>",
                 unsafe_allow_html=True,
             )
         if created_at:
             st.caption(created_at)
 
-    # ✅ 페이지 전환: 버튼 2개를 중앙에 '붙여서' 배치
+    # ✅ 페이지 전환: 버튼 2개(가운데 나란히)
     page_key = k("page_mode")
     if page_key not in st.session_state:
         st.session_state[page_key] = "photo"
 
-    # 바깥에서 가운데 정렬 영역 만들기
     wrap_l, wrap_c, wrap_r = st.columns([3, 4, 3])
     with wrap_c:
         btn_l, btn_r = st.columns([1, 1])
@@ -94,23 +90,23 @@ def ui_post_card(row, key_prefix: str = "card"):
 
     page_mode = st.session_state[page_key]
 
-    # ✅ 이미지 표시 (가운데 정렬 + 크기 고정)
+    # ✅ 이미지 표시: 안전 함수 사용 + 가운데 정렬 + 고정 크기
     if page_mode == "photo":
         if user_photo_url:
-            c1, c2, c3 = st.columns([1, 2, 1])   # 가운데 컬럼에만 이미지 출력
+            c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
-                st.image(user_photo_url, width=400)  # 사진 400px
+                _safe_show_image(user_photo_url, width=400)  # 사진 400px
         else:
             st.info("사진이 없어요.")
     else:
         if book_cover_snapshot:
             c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
-                st.image(book_cover_snapshot, width=200)  # 표지 200px
+                _safe_show_image(book_cover_snapshot, width=300)  # 표지 300px
         else:
             st.info("책 표지 없음")
 
-    # ✅ 닉네임(볼드) 다음에 텍스트 (좋아요 위)
+    # 닉네임(볼드) + 텍스트
     if text or nickname:
         st.markdown(f"**{nickname}** {text if text else ''}")
 
