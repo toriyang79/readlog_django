@@ -110,4 +110,12 @@ def ui_auth():
         pw_s = st.text_input("비밀번호", type="password", key="signup_pw")
         if st.button("회원가입"):
             if not email_s or not nickname_s or not pw_s:
-                st.warning("모든 칸을 입력해주세요
+                st.warning("모든 칸을 입력해주세요.")
+            elif get_user_by_email(email_s):
+                st.error("이미 가입된 이메일입니다.")
+            else:
+                try:
+                    create_user(email_s, pw_s, nickname_s)
+                    st.success("회원가입 성공! 이제 로그인 해주세요.")
+                except Exception as e:
+                    st.error(f"회원가입 실패: {e}")
