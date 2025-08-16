@@ -43,13 +43,15 @@ def page_create_post():
         selected_book = results[idx]
         st.session_state.selected_book = selected_book  # ✅ 선택 유지
 
-        # --- 표지 미리보기 (카카오 썸네일 그대로 사용) ---
-        if selected_book.get("cover_url"):
-            st.image(
-                selected_book["cover_url"],
-                caption=f"책 표지 미리보기: {selected_book['title']}",
-                use_column_width=True,
+        # --- 표지 미리보기 ---
+        cover_url = selected_book.get("cover_url")
+        if cover_url:
+            # URL 이미지는 간혹 st.image에서 차단/미표시 되는 경우가 있어 HTML로 안전하게 렌더링
+            st.markdown(
+                f"<p style='text-align:center;margin:0.5rem 0;'><img src='{cover_url}' style='max-width:100%;height:auto;border-radius:8px;'/></p>",
+                unsafe_allow_html=True,
             )
+            st.caption(f"책 표지 미리보기: {selected_book['title']}")
         else:
             st.info("표지 이미지가 없는 도서예요.")
     else:

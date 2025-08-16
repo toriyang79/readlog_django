@@ -21,6 +21,38 @@ def _openlibrary_cover(isbn: str) -> str:
     # L: large / M, S도 가능
     return f"https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg"
 
+def _looks_like_valid_image(url: str) -> bool:
+    """
+    원격 이미지 URL의 유효성을 가볍게 검사.
+    - HEAD로 Content-Length가 1KB 이상인지 우선 확인
+    - 없거나 너무 작으면 소용량 GET로 길이 확인
+    """
+    if not url:
+        return False
+    try:
+        h = requests.head(url, allow_redirects=True, timeout=5)
+        if h.status_code == 200:
+            size = h.headers.get("Content-Length")
+            if size and size.isdigit() and int(size) >= 1024:
+                return True
+        # 일부 서버는 HEAD를 제대로 처리하지 않음 → 소량 GET
+        g = requests.get(url, stream=True, timeout=8)
+        if g.status_code == 200:
+            # 최대 16KB만 읽어서 길이 판정
+            total = 0
+            chunk_size = 4096
+            for chunk in g.iter_content(chunk_size=chunk_size):
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total >= 1024:
+                    return True
+                if total >= 16384:  # 16KB까지만 확인
+                    break
+    except Exception:
+        return False
+    return False
+
 def search_books(query: str, size: int = 10):
     """제목/ISBN 자동 판단해서 카카오에서 책 검색한 뒤, 고화질 커버(URL)까지 구성."""
     q = (query or "").strip()
@@ -61,9 +93,10 @@ def search_books(query: str, size: int = 10):
         # 카카오 썸네일(작은 편)
         kakao_thumb = (d.get("thumbnail") or "").strip()
 
-        # ISBN이 있으면 OpenLibrary 고해상도 커버 우선 사용
+        # ISBN이 있으면 OpenLibrary 고해상도 커버 우선 사용하되,
+        # 실제로 유효하지 않으면(1x1 등) 카카오 썸네일로 폴백
         hq_cover = _openlibrary_cover(isbn) if isbn else ""
-        cover_url = hq_cover or kakao_thumb  # 고화질 → 폴백 순서
+        cover_url = hq_cover if _looks_like_valid_image(hq_cover) else kakao_thumb
 
         results.append(
             {
