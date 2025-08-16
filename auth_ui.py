@@ -28,7 +28,7 @@ def _set_session_user(row):
     }
 
 def ui_auth():
-    # ✅ 여기서 쿠키 매니저 준비(함수 안에서)
+    # ✅ 쿠키 매니저 준비(함수 안에서)
     cookies = EncryptedCookieManager(prefix="readlog_", password=_cookie_password())
     if not cookies.ready():
         st.warning("쿠키를 준비 중입니다. 잠시 후 새로고침 해주세요.")
@@ -43,9 +43,11 @@ def ui_auth():
         uid = cookies.get("user_id")
         if uid:
             try:
-                row = get_user_by_id(int(uid))
-                if row:
-                    _set_session_user(row)
+                uid = str(uid).strip()
+                if uid.isdigit():  # 숫자인 경우만 처리
+                    row = get_user_by_id(int(uid))
+                    if row:
+                        _set_session_user(row)
             except Exception:
                 pass
 
@@ -67,10 +69,18 @@ def ui_auth():
                 st.session_state.unread_count = 0
                 st.rerun()
 
+        # (로그아웃 버튼 핸들러)
         if st.sidebar.button("로그아웃"):
+            # 1) 세션 사용자 비우기
             st.session_state.user = None
-            cookies.pop("user_id", None)
+            st.session_state.unread_count = 0
+
+            # 2) 쿠키 확실히 비우기
+            cookies["user_id"] = ""        # 빈 값으로 덮어쓰기
+            if "user_id" in cookies:       # 키 자체 삭제
+                del cookies["user_id"]
             cookies.save()
+
             st.success("로그아웃되었습니다.")
             st.rerun()
 
@@ -100,12 +110,4 @@ def ui_auth():
         pw_s = st.text_input("비밀번호", type="password", key="signup_pw")
         if st.button("회원가입"):
             if not email_s or not nickname_s or not pw_s:
-                st.warning("모든 칸을 입력해주세요.")
-            elif get_user_by_email(email_s):
-                st.error("이미 가입된 이메일입니다.")
-            else:
-                try:
-                    create_user(email_s, pw_s, nickname_s)
-                    st.success("회원가입 성공! 이제 로그인 해주세요.")
-                except Exception as e:
-                    st.error(f"회원가입 실패: {e}")
+                st.warning("모든 칸을 입력해주세요
