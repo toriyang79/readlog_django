@@ -1,5 +1,7 @@
+# ============================
 # models.py
 # DB에 접근하는 모든 함수들을 모아둔 파일 (초보용: 짧고 단순하게 유지)
+# ============================
 from db import get_conn
 from utils import now_str, hash_password
 

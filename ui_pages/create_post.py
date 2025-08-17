@@ -86,6 +86,7 @@ def page_create_post():
                 text=text,
             )
             st.success("게시 완료! 피드에서 확인해보세요.")
+            st.rerun()  # 새 글이 피드에 즉시 반영됨
         except Exception as e:
             st.error(f"게시 실패: {e}")
         finally:

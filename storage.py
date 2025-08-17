@@ -1,4 +1,6 @@
+# ============================
 # storage.py
+# ============================
 import os
 import uuid
 from PIL import Image
