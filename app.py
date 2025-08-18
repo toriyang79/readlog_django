@@ -67,6 +67,7 @@ def main():
         format_func=lambda x: NAV_LABELS[x],
         horizontal=True,
         key="nav",
+        label_visibility="collapsed",
     )
 
     # 화면 라우팅
