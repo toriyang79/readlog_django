@@ -90,6 +90,51 @@ readlog/
 좋아요/리포스트/댓글: 버튼 클릭 시 DB 업데이트 및 알림 전송, 화면은 즉시 갱신됩니다.
 
 ---
+## 🚀 로컬에서 실행하는 방법
+0. 준비물
+
+Python 3.10 이상 (권장: 3.11~3.12)
+카카오 도서 API 키 → KAKAO_API_KEY (필수)
+(선택) 자동 로그인 암호화 키 → COOKIE_PASSWORD (16자 이상 임의 문자열)
+
+1. 프로젝트 받기
+
+git clone <repo-url> readlog
+cd readlog
+
+
+2. 가상환경 만들기 & 켜기
+
+Windows (PowerShell)
+
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+
+
+macOS / Linux
+
+python3 -m venv .venv
+source .venv/bin/activate
+
+
+3. 패키지 설치
+
+pip install -r requirements.txt
+
+
+4. API 키 설정(가장 쉬운 방법)
+프로젝트 루트에 .streamlit/secrets.toml 파일 만들고 아래 내용 저장:
+
+KAKAO_API_KEY = "카카오_REST_API_키"
+COOKIE_PASSWORD = "원하는_아무_문자열_16자_이상"
+
+
+5. 실행
+
+streamlit run app.py
+
+
+처음 실행하면 data/readlog.db, data/uploads/, data/posts.csv가 자동 생성됩니다.
 
 ## 🚀 향후 개발 계획
 - 📚 책 정보 자동 불러오기 (교보문고/알라딘 API 연동)
