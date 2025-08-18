@@ -1,6 +1,7 @@
 # ============================
 # db.py (최종본: 전체 교체)
 # ============================
+# -*- coding: utf-8 -*-
 import os
 import sqlite3
 
@@ -100,18 +101,26 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 """
 
-def ensure_dirs():
+def ensure_dirs() -> None:
+    """data/, data/uploads/ 폴더 보장"""
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-def get_conn():
+def get_conn() -> sqlite3.Connection:
+    """공용 커넥션 팩토리 (외래키 강제)"""
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    # ✅ 연결별 외래키 강제(안전)
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
-def init_db():
+def init_db() -> None:
+    """스키마 보장 (여러 번 호출해도 안전)"""
     ensure_dirs()
     with get_conn() as conn:
         conn.executescript(SCHEMA_SQL)
+
+# 스크립트 단독 실행 시: DB/폴더 생성 + 스키마 보장
+if __name__ == "__main__":
+    init_db()
+    print(f"[readlog] DB ready at: {DB_PATH}")
+    print(f"[readlog] uploads dir: {UPLOAD_DIR}")
