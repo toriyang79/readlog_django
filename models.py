@@ -1,9 +1,39 @@
 # ============================
 # models.py
-# DB에 접근하는 모든 함수들을 모아둔 파일 (초보용: 짧고 단순하게 유지)
+# DB에 접근하는 모든 함수들을 모아둔 파일
 # ============================
+import os
+import csv
 from db import get_conn
 from utils import now_str, hash_password
+
+# -----------------------------
+# 내부 유틸: 게시글 CSV 미러 저장
+# -----------------------------
+def export_posts_to_csv(csv_path=os.path.join(os.path.dirname(__file__), "data", "posts.csv")):
+    """감사/백업용 CSV 미러 저장. 주 저장소는 SQLite이며, CSV는 가시성/제출용 보조 저장입니다."""
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT p.id, p.created_at, p.user_id, u.nickname,
+               p.text, p.user_photo_url,
+               b.title AS book_title, b.author AS book_author, p.book_cover_url_snapshot,
+               p.like_count, p.repost_count
+        FROM posts p
+        JOIN users u ON p.user_id=u.id
+        LEFT JOIN books b ON p.book_id=b.id
+        ORDER BY datetime(p.created_at) DESC
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    cols = ["id","created_at","user_id","nickname","text","user_photo_url",
+            "book_title","book_author","book_cover_url_snapshot","like_count","repost_count"]
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        wr = csv.writer(f)
+        wr.writerow(cols)
+        for r in rows:
+            wr.writerow([r[c] if c in r.keys() else "" for c in cols])
 
 # -----------------------------
 # 사용자(회원) 관련
@@ -103,6 +133,7 @@ def create_post(user_id, book_id, user_photo_url, book_cover_url_snapshot, text)
             (user_id, book_id, user_photo_url, book_cover_url_snapshot, text, now_str()),
         )
     conn.close()
+    export_posts_to_csv()  # ✅ CSV 미러 저장
 
 def list_posts(limit=50, offset=0):
     """피드용: 최신순 목록"""
@@ -124,6 +155,53 @@ def list_posts(limit=50, offset=0):
     conn.close()
     return rows
 
+def get_post(post_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM posts WHERE id=?", (post_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+def update_post(user_id, post_id, new_text=None, new_user_photo_url=None):
+    """작성자만 수정 가능"""
+    row = get_post(post_id)
+    if not row or row["user_id"] != user_id:
+        return False
+    sets, vals = [], []
+    if new_text is not None:
+        sets.append("text=?"); vals.append(new_text)
+    if new_user_photo_url is not None:
+        sets.append("user_photo_url=?"); vals.append(new_user_photo_url)
+    if not sets:
+        return True
+    vals.append(post_id)
+    conn = get_conn()
+    with conn:
+        conn.execute(f"UPDATE posts SET {', '.join(sets)} WHERE id=?", vals)
+    conn.close()
+    export_posts_to_csv()  # ✅ CSV 미러 저장
+    return True
+
+def delete_post(user_id, post_id):
+    """작성자만 삭제 가능, 로컬 이미지 파일도 정리"""
+    row = get_post(post_id)
+    if not row or row["user_id"] != user_id:
+        return False
+    # 로컬 이미지 삭제(있으면)
+    try:
+        p = row["user_photo_url"]
+        if p and os.path.exists(p):
+            os.remove(p)
+    except Exception:
+        pass
+    conn = get_conn()
+    with conn:
+        conn.execute("DELETE FROM posts WHERE id=?", (post_id,))
+    conn.close()
+    export_posts_to_csv()  # ✅ CSV 미러 저장
+    return True
+
 # -----------------------------
 # 좋아요 / 책갈피(리트윗)
 # -----------------------------
@@ -141,6 +219,7 @@ def toggle_like(user_id, post_id):
                 (post_id,),
             )
         conn.close()
+        export_posts_to_csv()  # ✅ 좋아요 수 변경 반영
         return False  # 좋아요 취소됨
     else:
         with conn:
@@ -150,6 +229,7 @@ def toggle_like(user_id, post_id):
             )
             conn.execute("UPDATE posts SET like_count = like_count + 1 WHERE id=?", (post_id,))
         conn.close()
+        export_posts_to_csv()  # ✅ 좋아요 수 변경 반영
         return True  # 좋아요 추가됨
 
 def do_repost(user_id, post_id):
@@ -168,6 +248,7 @@ def do_repost(user_id, post_id):
         )
         conn.execute("UPDATE posts SET repost_count = repost_count + 1 WHERE id=?", (post_id,))
     conn.close()
+    export_posts_to_csv()  # ✅ 리포스트 수 변경 반영
     return True
 
 # -----------------------------
@@ -181,6 +262,7 @@ def add_comment(user_id, post_id, text):
             (user_id, post_id, text, now_str()),
         )
     conn.close()
+    # 댓글 수는 CSV에 포함하지 않으므로 미러 생략(원하면 여기서도 export 호출 가능)
 
 def list_comments(post_id):
     conn = get_conn()

@@ -1,13 +1,16 @@
-
 # ============================
-# db.py
+# db.py (최종본: 전체 교체)
 # ============================
 import os
 import sqlite3
 
-DB_PATH = "data.db"
-UPLOAD_DIR = "uploads"
+# ✅ 프로젝트 기준 절대경로 고정
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+DB_PATH = os.path.join(DATA_DIR, "readlog.db")
 
+# ✅ 스키마 (원래 쓰던 CREATE TABLE 문 전부 유지)
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
 
@@ -97,17 +100,18 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 """
 
-
-
 def ensure_dirs():
-    # data/uploads 디렉토리 보장
-    os.makedirs("data/uploads", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    # ✅ 연결별 외래키 강제(안전)
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def init_db():
-    # ... (당신의 기존 테이블 생성 코드 유지)
-    pass
+    ensure_dirs()
+    with get_conn() as conn:
+        conn.executescript(SCHEMA_SQL)

@@ -4,6 +4,8 @@
 import streamlit as st
 import os
 from PIL import Image
+from storage import save_uploaded_image
+from models import update_post, delete_post
 
 def _get(row, key, default=None):
     try:
@@ -75,7 +77,7 @@ def ui_post_card(row, key_prefix: str = "card"):
             _safe_show_image(profile_img, width=48)
         st.caption(f"{nickname}")
     with meta_r:
-        # ✅ 제목/작가: h2(요청), 중앙 정렬
+        # ✅ 제목/작가: h3, 중앙 정렬
         if book_title or book_author:
             st.markdown(
                 f"<h3 style='text-align:center;margin:0.2rem 0 0.6rem 0;font-weight:700;'>{book_title} | 작가: {book_author}</h3>",
@@ -113,7 +115,7 @@ def ui_post_card(row, key_prefix: str = "card"):
         if book_cover_snapshot:
             c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
-                _safe_show_image(book_cover_snapshot, width=200)  # 표지 300px
+                _safe_show_image(book_cover_snapshot, width=200)  # 표지 200px
         else:
             st.info("책 표지 없음")
 
@@ -151,6 +153,45 @@ def ui_post_card(row, key_prefix: str = "card"):
                         post_id=post_id,
                     )
                 st.rerun()
+
+    # ✏️ 게시글 수정 / 🗑️ 삭제 (작성자 전용)
+    is_owner = bool(st.session_state.get("user")) and (st.session_state.user["id"] == author_user_id)
+    if is_owner:
+        with st.expander("✏️ 게시글 수정 / 🗑️ 삭제"):
+            new_text = st.text_area("내용 수정", value=text or "", key=k("edit_text"))
+            new_img = st.file_uploader("사진 바꾸기(선택)", type=["png", "jpg", "jpeg"], key=k("edit_img"))
+            col_u, col_d = st.columns(2)
+
+            # 수정(저장)
+            with col_u:
+                if st.button("저장", key=k("edit_save")):
+                    new_path = None
+                    if new_img is not None:
+                        new_path = save_uploaded_image(new_img)
+                    ok = update_post(
+                        st.session_state.user["id"],
+                        post_id,
+                        new_text=new_text,
+                        new_user_photo_url=new_path,
+                    )
+                    if ok:
+                        st.success("수정 완료")
+                        st.rerun()
+                    else:
+                        st.error("수정 권한이 없어요.")
+
+            # 삭제
+            with col_d:
+                confirm_del = st.checkbox("정말 삭제할래요?", key=k("del_confirm"))
+                if st.button("삭제", key=k("del_btn"), type="secondary", disabled=not confirm_del):
+                    ok = delete_post(st.session_state.user["id"], post_id)
+                    if ok:
+                        st.success("삭제 완료")
+                        # 피드로 이동
+                        st.session_state["nav"] = "feed"
+                        st.rerun()
+                    else:
+                        st.error("삭제 권한이 없어요.")
 
     # 댓글
     with st.expander("💬 댓글 보기/쓰기"):

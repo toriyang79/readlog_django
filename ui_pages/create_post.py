@@ -85,7 +85,9 @@ def page_create_post():
                 book_cover_url_snapshot=cover_url_used,
                 text=text,
             )
-            st.success("게시 완료! 피드에서 확인해보세요.")
+            st.success("게시 완료! 피드로 이동합니다.")
+            st.session_state.posting = False
+            st.session_state["nav"] = "feed"   # ✅ 자동 이동 타겟
             st.rerun()  # 새 글이 피드에 즉시 반영됨
         except Exception as e:
             st.error(f"게시 실패: {e}")
