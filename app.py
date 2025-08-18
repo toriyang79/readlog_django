@@ -46,7 +46,8 @@ def main():
             padding: 8px 14px; background: #f7f7ff; font-weight: 700;
             cursor: pointer;
           }
-          div[role="radiogroup"] > label[data-baseweb="radio"] > div:first-child { display: none; }
+          /* 라디오 원형 아이콘만 숨김 (클릭은 라벨 영역이 처리) */
+          div[role="radiogroup"] > label[data-baseweb="radio"] > div:first-child { display: none !important; }
           div[role="radiogroup"] > label[data-selected="true"] {
             background: #eef2ff; border-color:#6366f1; color:#3730a3;
             box-shadow: 0 1px 0 0 #ef4444 inset;
@@ -66,9 +67,12 @@ def main():
         index=NAV_OPTIONS.index(st.session_state.get("nav", "feed")),
         format_func=lambda x: NAV_LABELS[x],
         horizontal=True,
-        key="nav",
+        key="nav_radio",
         label_visibility="collapsed",
     )
+
+    # 선택값을 앱 내 라우팅 상태에 반영 (위젯 키와 분리)
+    st.session_state["nav"] = nav
 
     # 화면 라우팅
     if nav == "feed":
