@@ -16,6 +16,7 @@ from auth_ui import ui_auth
 from ui_pages.feed import page_feed
 from ui_pages.create_post import page_create_post
 from ui_pages.profile import page_profile
+from models import top_bookup_posts
 
 
 # 내비게이션 옵션
@@ -59,6 +60,40 @@ def main():
 
     # 로그인/회원 UI
     ui_auth()
+
+    # -----------------------------
+    # 사이드바: 리드로그 사용법(유튜브) 미리보기 + 새창 링크
+    # -----------------------------
+    with st.sidebar:
+        with st.expander("📺 리드로그 사용법 (미리보기)"):
+            st.video("https://youtu.be/VhTpKDROP2M")
+            st.markdown(
+                "<a href='https://youtu.be/VhTpKDROP2M' target='_blank'>새 창에서 보기</a>",
+                unsafe_allow_html=True,
+            )
+
+        st.divider()
+
+        # -----------------------------
+        # 사이드바: BookUp Top 목록
+        # -----------------------------
+        st.markdown("### 📢 BookUp Top")
+        try:
+            top_rows = top_bookup_posts(limit=7)
+        except Exception:
+            top_rows = []
+        if not top_rows:
+            st.caption("아직 BookUp된 게시물이 없어요.")
+        else:
+            for rank, r in enumerate(top_rows, start=1):
+                title = (r["book_title"] or "(제목 없음)").strip()
+                nickname = r["nickname"]
+                count = r["repost_count"]
+                btn_label = f"{rank}. {title} · {nickname}  ({count})"
+                if st.button(btn_label, key=f"sb_top_{r['post_id']}"):
+                    st.session_state["nav"] = "feed"
+                    st.session_state["feed_sort"] = "bookup"
+                    st.rerun()
 
     # ✅ 라디오 내비게이션 (프로그램이 제어 가능)
     nav = st.radio(

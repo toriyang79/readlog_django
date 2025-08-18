@@ -15,9 +15,22 @@ from models import (
 )
 
 def _cookie_password() -> str:
-    return os.getenv("COOKIE_PASSWORD") or getattr(st, "secrets", {}).get(
-        "COOKIE_PASSWORD", "readlog_dev_secret"
-    )
+    """쿠키 암호를 환경변수 > secrets.toml > 기본값 순으로 결정.
+    secrets.toml 이 없을 때 Streamlit이 FileNotFoundError 를 던지므로 안전 처리.
+    """
+    env_pw = os.getenv("COOKIE_PASSWORD")
+    if env_pw:
+        return env_pw
+    try:
+        secrets_obj = getattr(st, "secrets", None)
+        if secrets_obj:
+            val = secrets_obj.get("COOKIE_PASSWORD", None)
+            if val:
+                return val
+    except Exception:
+        # secrets.toml 이 없거나 접근 실패해도 기본값 사용
+        pass
+    return "readlog_dev_secret"
 
 def _set_session_user(row):
     st.session_state.user = {
@@ -50,8 +63,6 @@ def ui_auth():
                         _set_session_user(row)
             except Exception:
                 pass
-
-    st.sidebar.header("🔐 로그인/회원가입")
 
     # 로그인된 상태
     if st.session_state.user:
@@ -88,6 +99,7 @@ def ui_auth():
         return
 
     # 비로그인 → 로그인/회원가입 탭
+    st.sidebar.header("🔐 로그인/회원가입")
     tab_login, tab_signup = st.sidebar.tabs(["로그인", "회원가입"])
 
     with tab_login:

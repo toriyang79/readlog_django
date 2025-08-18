@@ -135,21 +135,53 @@ def create_post(user_id, book_id, user_photo_url, book_cover_url_snapshot, text)
     conn.close()
     export_posts_to_csv()  # ✅ CSV 미러 저장
 
-def list_posts(limit=50, offset=0):
-    """피드용: 최신순 목록"""
+def list_posts(limit=50, offset=0, sort: str = "latest"):
+    """피드용 목록.
+    - sort == "latest": 최신순
+    - sort == "bookup": BookUp(=repost_count) 많은 순, 같으면 최신순
+    """
+    order_sql = {
+        "latest": "ORDER BY datetime(p.created_at) DESC",
+        "bookup": "ORDER BY p.repost_count DESC, datetime(p.created_at) DESC",
+    }.get(sort or "latest", "ORDER BY datetime(p.created_at) DESC")
+
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
-        """
+        f"""
         SELECT p.*, u.nickname, u.profile_image,
                b.title AS book_title, b.author AS book_author
         FROM posts p
         JOIN users u ON p.user_id = u.id
         LEFT JOIN books b ON p.book_id = b.id
-        ORDER BY datetime(p.created_at) DESC
+        {order_sql}
         LIMIT ? OFFSET ?
         """,
         (limit, offset),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+def top_bookup_posts(limit: int = 5):
+    """사이드바용: BookUp 많은 게시물 상위 N개.
+    제목, 닉네임, repost_count, post_id 포함
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT p.id AS post_id,
+               ifnull(b.title, '') AS book_title,
+               ifnull(u.nickname, '익명') AS nickname,
+               p.repost_count
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        LEFT JOIN books b ON p.book_id = b.id
+        ORDER BY p.repost_count DESC, datetime(p.created_at) DESC
+        LIMIT ?
+        """,
+        (limit,),
     )
     rows = cur.fetchall()
     conn.close()
