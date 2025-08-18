@@ -20,29 +20,39 @@ def _get(row, key, default=None):
     return default if val is None else val
 
 # ✅ 로컬 경로/URL 모두 안전하게 표시 (경로 깨짐, 읽기 실패 방지)
-def _safe_show_image(src: str, width: int, center: bool = True):
-    """로컬 경로/URL 모두 안전하게 표시 (URL은 완전 중앙정렬)"""
+def _safe_show_image(src: str, width: int = None, center: bool = True, fit_to_column: bool = False):
+    """로컬 경로/URL 모두 안전하게 표시.
+    - fit_to_column=True: 가로폭 100%로 반응형 표시(모바일 최적화)
+    - width가 지정되면 해당 픽셀로 표시
+    """
     if not src:
         st.info("이미지 파일이 없어요.")
         return
     src = str(src).replace("\\", "/")
     try:
         if src.startswith(("http://", "https://")):
-            if center:
-                # ✅ URL 이미지를 HTML로 가운데 정렬
-                st.markdown(
-                    f"<p style='text-align:center; margin:0;'><img src='{src}' width='{width}'></p>",
-                    unsafe_allow_html=True,
-                )
+            if fit_to_column:
+                style = "max-width:100%;width:100%;height:auto;"
+                html = f"<p style='text-align:{'center' if center else 'left'};margin:0;'><img src='{src}' style='{style}'></p>"
+                st.markdown(html, unsafe_allow_html=True)
             else:
-                st.image(src, width=width)
+                if center:
+                    st.markdown(
+                        f"<p style='text-align:center; margin:0;'><img src='{src}' {('width=\''+str(width)+'\'' ) if width else ''}></p>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.image(src, width=width)
             return
         # 로컬 파일
         if os.path.exists(src):
             with Image.open(src) as img:
-                # st.image는 좌측 정렬되므로, 중앙정렬이 필요하면
-                # 바깥에서 columns([1,2,1])로 감싸 호출하세요.
-                st.image(img, width=width)
+                if fit_to_column:
+                    st.image(img, use_column_width=True)
+                else:
+                    # st.image는 좌측 정렬되므로, 중앙정렬이 필요하면
+                    # 바깥에서 columns([1,2,1])로 감싸 호출하세요.
+                    st.image(img, width=width)
         else:
             st.info(f"이미지 파일을 찾을 수 없어요: {src}")
     except Exception as e:
@@ -86,36 +96,34 @@ def ui_post_card(row, key_prefix: str = "card"):
         if created_at:
             st.caption(created_at)
 
-    # ✅ 페이지 전환: 버튼 2개(가운데 나란히)
+    # ✅ 페이지 전환: 버튼 2개(한 줄 배열)
     page_key = k("page_mode")
     if page_key not in st.session_state:
         st.session_state[page_key] = "photo"
 
-    wrap_l, wrap_c, wrap_r = st.columns([3, 4, 3])
-    with wrap_c:
-        btn_l, btn_r = st.columns([1, 1])
-        with btn_l:
-            if st.button("📷 사진", key=k("btn_photo"), use_container_width=True):
-                st.session_state[page_key] = "photo"
-        with btn_r:
-            if st.button("📚 책 표지", key=k("btn_cover"), use_container_width=True):
-                st.session_state[page_key] = "cover"
+    btn_l, btn_r = st.columns(2)
+    with btn_l:
+        if st.button("📷 사진", key=k("btn_photo"), use_container_width=True):
+            st.session_state[page_key] = "photo"
+    with btn_r:
+        if st.button("📚 책 표지", key=k("btn_cover"), use_container_width=True):
+            st.session_state[page_key] = "cover"
 
     page_mode = st.session_state[page_key]
 
-    # ✅ 이미지 표시: 안전 함수 사용 + 가운데 정렬 + 고정 크기
+    # ✅ 이미지 표시: 반응형(모바일 최적화)
     if page_mode == "photo":
         if user_photo_url:
-            c1, c2, c3 = st.columns([1, 2, 1])
+            c1, c2, c3 = st.columns([1, 4, 1])
             with c2:
-                _safe_show_image(user_photo_url, width=400)  # 사진 400px
+                _safe_show_image(user_photo_url, fit_to_column=True)
         else:
             st.info("사진이 없어요.")
     else:
         if book_cover_snapshot:
-            c1, c2, c3 = st.columns([1, 2, 1])
+            c1, c2, c3 = st.columns([1, 4, 1])
             with c2:
-                _safe_show_image(book_cover_snapshot, width=200)  # 표지 200px
+                _safe_show_image(book_cover_snapshot, fit_to_column=True)
         else:
             st.info("책 표지 없음")
 
@@ -123,8 +131,8 @@ def ui_post_card(row, key_prefix: str = "card"):
     if text or nickname:
         st.markdown(f"**{nickname}** {text if text else ''}")
 
-    # 액션 버튼
-    a1, a2, _, _ = st.columns(4)
+    # 액션 버튼 (한 줄 배열)
+    a1, a2 = st.columns(2)
     with a1:
         if st.button(f"📖 BookLike {like_count}", key=k("like")):
             if not st.session_state.get("user"):

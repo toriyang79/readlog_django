@@ -95,19 +95,23 @@ def main():
                     st.session_state["feed_sort"] = "bookup"
                     st.rerun()
 
-    # ✅ 라디오 내비게이션 (프로그램이 제어 가능)
-    nav = st.radio(
-        "메뉴",
-        options=NAV_OPTIONS,
-        index=NAV_OPTIONS.index(st.session_state.get("nav", "feed")),
-        format_func=lambda x: NAV_LABELS[x],
-        horizontal=True,
-        key="nav_radio",
-        label_visibility="collapsed",
-    )
+    # ✅ 모바일 친화 네비게이션: 3분할 버튼 한 줄
+    cur_nav = st.session_state.get("nav", "feed")
+    col_f, col_w, col_p = st.columns(3)
+    with col_f:
+        if st.button("📰 피드", use_container_width=True, type=("primary" if cur_nav == "feed" else "secondary")):
+            st.session_state["nav"] = "feed"
+            st.rerun()
+    with col_w:
+        if st.button("📝 글쓰기", use_container_width=True, type=("primary" if cur_nav == "write" else "secondary")):
+            st.session_state["nav"] = "write"
+            st.rerun()
+    with col_p:
+        if st.button("👤 프로필", use_container_width=True, type=("primary" if cur_nav == "profile" else "secondary")):
+            st.session_state["nav"] = "profile"
+            st.rerun()
 
-    # 선택값을 앱 내 라우팅 상태에 반영 (위젯 키와 분리)
-    st.session_state["nav"] = nav
+    nav = st.session_state.get("nav", "feed")
 
     # 화면 라우팅
     if nav == "feed":
