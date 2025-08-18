@@ -9,7 +9,11 @@ import sqlite3
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
-DB_PATH = os.path.join(DATA_DIR, "readlog.db")
+
+# ✅ DB 경로: 기존(root)의 legacy DB가 있으면 우선 사용, 없으면 신규 경로 사용
+LEGACY_DB_PATH = os.path.join(BASE_DIR, "data.db")
+NEW_DB_PATH = os.path.join(DATA_DIR, "readlog.db")
+DB_PATH = LEGACY_DB_PATH if os.path.exists(LEGACY_DB_PATH) else NEW_DB_PATH
 
 # ✅ 스키마 (원래 쓰던 CREATE TABLE 문 전부 유지)
 SCHEMA_SQL = """
