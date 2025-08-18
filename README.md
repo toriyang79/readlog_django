@@ -1,13 +1,14 @@
 # 📙 리드로그 (ReadLog)
 
 > **마음이 문장을 따라 흐르는 곳, 📙 리드로그**  
-> 나의 독서 기록을 사진과 함께 남기고, 다양한 사람들과 소통하며 책을 추천·공유할 수 있는 플랫폼
+> 독서 기록을 사진과 함께 남기고, 다양한 사람들과 소통하며 책을 추천·공유할 수 있는 플랫폼
 
 ---
 
 ## 📌 프로젝트 소개
 리드로그는 **독서 기록 + 인스타그램 스타일의 SNS 기능**을 결합한 서비스입니다.  
 책을 읽고 느낀 점을 기록하고, 사진과 함께 업로드하며, 좋아요·책갈피·댓글로 다른 독서가와 소통할 수 있습니다.
+앱은 Streamlit 기반 단일 페이지로 작동하며, SQLite에 영구 저장하고, 변경사항을 CSV로 미러 저장합니다
 
 ---
 
@@ -18,6 +19,9 @@
 - 닉네임(볼드체) + 감상 텍스트 표시
 - 사진 / 책 표지 보기 전환 (버튼 방식)
 - 사진과 책 표지를 **가운데 정렬**로 배치
+- 카카오 도서 검색으로 책 선택 → 내 사진 업로드 → 게시하기 클릭 시 저장, 바로 피드로 이동.
+- 최신순 피드(최대 50)와 내 글/리포스트 목록 제공.
+- 카드 내부 “✏️ 수정/🗑️ 삭제”에서 내용/사진 교체 및 삭제 가능. 삭제 후 자동으로 피드 이동.
 
 ### 2. **소셜 기능**
 - 📖 좋아요 (BookLike)
@@ -33,52 +37,55 @@
 ---
 
 ## 🛠 기술 스택
-- **Python 3.12**
-- **Streamlit** 1.37.1
-- **Pillow** 10.4.0
-- **pandas** (데이터 관리)
-- **SQLite** (데이터 저장)
-- **기타**: datetime, uuid 등 표준 라이브러리
 
+Frontend/UI: Streamlit (단일 페이지 라우팅, 라디오 내비를 탭처럼 스타일링)
+
+Backend/DB: SQLite + SQL(외래키 활성화), 스키마 보장 실행(재실행 안전)
+
+이미지 처리: Pillow(PIL)로 JPEG 변환 저장(quality=90)
+
+인증/세션: SHA-256 비밀번호 해시, EncryptedCookieManager로 암호화 쿠키 로그인 복원
+
+외부 API: Kakao Book Search + OpenLibrary 커버 폴백, URL 유효성 경량 검사(HEAD/소량 GET)
 ---
 
 ## 📂 디렉토리 구조
 ```
 readlog/
- ├── app.py               # 메인 실행 파일
- ├── models.py            # 데이터 처리 로직
- ├── ui_components.py     # 공용 UI 컴포넌트
- ├── requirements.txt     # 의존성 패키지 목록
- ├── README.md             # 프로젝트 설명 문서
- └── data/                # SQLite DB 및 리소스
-```
+├── app.py                 # 메인 실행(라디오 내비)
+├── auth_ui.py             # 로그인/회원가입 + 쿠키 로그인 복원
+├── book_utils.py          # 카카오 도서 검색 + 커버 폴백
+├── db.py                  # DB 경로 고정(data/readlog.db) + 스키마 보장
+├── models.py              # DB 액션(글/좋아요/리포스트/댓글) + CSV 미러
+├── storage.py             # 이미지 저장(data/uploads/…, JPEG 변환)
+├── ui_components.py       # 카드 UI(좋아요/리포스트/댓글/수정/삭제)
+├── utils.py               # now_str, 해시 등 유틸
+├── requirements.txt       # 의존성 목록
+├── README.md              # 프로젝트 설명 문서
+├── ui_pages/              # 화면별 페이지
+│   ├── __init__.py
+│   ├── create_post.py     # 글쓰기(업로드 후 자동 피드 이동)
+│   ├── feed.py            # 피드(최신 50)
+│   └── profile.py         # 내 글/리포스트
+├── data/                  # 영구 저장소(앱이 자동 생성)
+│   ├── readlog.db         # SQLite DB
+│   ├── posts.csv          # 게시글 CSV 미러(자동 갱신)
+│   └── uploads/           # 업로드 이미지 폴더
+│       └── ...            # 이미지 파일들
+├── .gitignore
+└── (legacy) data.db       # 예전 경로 사용분(이제 미사용, 백업 후 삭제 권장)
 
 ---
 
-## 📦 설치 및 실행 방법
+## 📦 사용법
 
-1. **저장소 클론**
-```bash
-git clone <레포지토리_URL>
-cd readlog
-```
+로그인/회원가입: 사이드바에서 진행, 로그인 성공 시 쿠키에 사용자 ID 저장 → 다음 접속 시 자동 로그인.
 
-2. **가상환경 생성 및 활성화**
-```bash
-python -m venv venv
-venv\Scripts\activate      # Windows
-source venv/bin/activate   # Mac/Linux
-```
+글쓰기: 상단 라디오에서 📝 글쓰기 선택 → 책 검색(제목/ISBN) → 결과 선택 → 내 사진 업로드 + 감상 입력 → 게시하기. 성공 시 피드로 자동 이동하여 최상단에서 내 게시물을 확인합니다.
 
-3. **필요 패키지 설치**
-```bash
-pip install -r requirements.txt
-```
+수정/삭제: 내 카드의 “✏️ 게시글 수정 / 🗑️ 삭제”에서 실행. 삭제 후 자동으로 피드로 이동.
 
-4. **앱 실행**
-```bash
-streamlit run app.py
-```
+좋아요/리포스트/댓글: 버튼 클릭 시 DB 업데이트 및 알림 전송, 화면은 즉시 갱신됩니다.
 
 ---
 
