@@ -13,18 +13,23 @@ def page_profile():
 
     uid = st.session_state.user["id"]
 
-    st.subheader("내가 쓴 글")
-    mine = my_posts(uid)
-    if not mine:
-        st.info("내가 쓴 글이 아직 없어요.")
-    else:
-        for i, r in enumerate(mine):
-            ui_post_card(r, key_prefix=f"my_{i}")
+    # 탭 네비게이션: "내가 쓴 글 | 내가 책갈피한 글"
+    st.session_state.setdefault("profile_tab", "mine")
+    tab_labels = ("내가 쓴 글", "내가 책갈피한 글")
+    tab_mine, tab_repost = st.tabs(tab_labels)
 
-    st.subheader("내가 책갈피한 글")
-    reps = my_reposts(uid)
-    if not reps:
-        st.info("책갈피한 글이 아직 없어요.")
-    else:
-        for i, r in enumerate(reps):
-            ui_post_card(r, key_prefix=f"rp_{i}")
+    with tab_mine:
+        mine = my_posts(uid)
+        if not mine:
+            st.info("내가 쓴 글이 아직 없어요.")
+        else:
+            for i, r in enumerate(mine):
+                ui_post_card(r, key_prefix=f"my_{i}")
+
+    with tab_repost:
+        reps = my_reposts(uid)
+        if not reps:
+            st.info("책갈피한 글이 아직 없어요.")
+        else:
+            for i, r in enumerate(reps):
+                ui_post_card(r, key_prefix=f"rp_{i}")
