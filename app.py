@@ -95,7 +95,7 @@ def main():
                     st.session_state["feed_sort"] = "bookup"
                     st.rerun()
 
-    # ✅ 모바일 친화 네비게이션: 3분할 버튼 한 줄
+    # ✅ 모바일 고정 한 줄: 3분할 버튼 네비게이션
     cur_nav = st.session_state.get("nav", "feed")
     col_f, col_w, col_p = st.columns(3)
     with col_f:

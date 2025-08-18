@@ -134,7 +134,7 @@ def ui_post_card(row, key_prefix: str = "card"):
     # 액션 버튼 (한 줄 배열)
     a1, a2 = st.columns(2)
     with a1:
-        if st.button(f"📖 BookLike {like_count}", key=k("like")):
+        if st.button(f"📖 BookLike {like_count}", key=k("like"), use_container_width=True):
             if not st.session_state.get("user"):
                 st.warning("로그인 후 이용 가능합니다.")
             else:
@@ -148,7 +148,7 @@ def ui_post_card(row, key_prefix: str = "card"):
                     )
                 st.rerun()
     with a2:
-        if st.button(f"📢 BookUp {repost_count}", key=k("repost")):
+        if st.button(f"📢 BookUp {repost_count}", key=k("repost"), use_container_width=True):
             if not st.session_state.get("user"):
                 st.warning("로그인 후 이용 가능합니다.")
             else:
