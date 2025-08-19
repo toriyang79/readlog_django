@@ -18,7 +18,7 @@ def page_feed():
 
     with sort_bookup:
         is_bookup = st.session_state.feed_sort == "bookup"
-        if st.button("📢 BookUp 많은 순", use_container_width=True, type="primary" if is_bookup else "secondary"):
+        if st.button("📢 BookUp순", use_container_width=True, type="primary" if is_bookup else "secondary"):
             st.session_state.feed_sort = "bookup"
             st.rerun()
 

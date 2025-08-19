@@ -139,7 +139,7 @@ def ui_post_card(row, key_prefix: str = "card"):
     # 3열 레이아웃: 좋아요, 북마크, 댓글
     a1, a2, a3 = st.columns(3)
     with a1:
-        if st.button(f"📖 BookLike {like_count}", key=k("like"), use_container_width=True):
+        if st.button(f"📖 Like {like_count}", key=k("like"), use_container_width=True):
             if not st.session_state.get("user"):
                 st.warning("로그인 후 이용 가능합니다.")
             else:

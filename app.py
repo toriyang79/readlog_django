@@ -64,6 +64,14 @@ def main():
               flex-shrink: 1 !important;
               min-width: 0 !important;
           }
+        /* --- Button Style Consistency --- */
+          .stButton > button {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              padding: 0.5rem 0.25rem; /* Adjust vertical/horizontal padding */
+              height: 3rem; /* Enforce a consistent height */
+          }
         </style>
         """,
         unsafe_allow_html=True,
