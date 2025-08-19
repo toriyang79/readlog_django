@@ -131,8 +131,17 @@ def ui_post_card(row, key_prefix: str = "card"):
     if text or nickname:
         st.markdown(f"**{nickname}** {text if text else ''}")
 
-    # 액션 버튼 (한 줄 배열)
-    a1, a2 = st.columns(2)
+    # --- 액션 버튼 및 댓글 (모바일 최적화) ---
+    comments = list_comments(post_id) or []
+    comment_count = len(comments)
+
+    # 댓글 표시 상태 (토글용)
+    comment_key = k("show_comments")
+    if comment_key not in st.session_state:
+        st.session_state[comment_key] = False
+
+    # 3열 레이아웃: 좋아요, 북마크, 댓글
+    a1, a2, a3 = st.columns(3)
     with a1:
         if st.button(f"📖 BookLike {like_count}", key=k("like"), use_container_width=True):
             if not st.session_state.get("user"):
@@ -161,8 +170,38 @@ def ui_post_card(row, key_prefix: str = "card"):
                         post_id=post_id,
                     )
                 st.rerun()
+    with a3:
+        # 댓글 버튼 클릭 시, 댓글 창 토글
+        if st.button(f"💬 댓글 {comment_count}", key=k("comment_toggle"), use_container_width=True):
+            st.session_state[comment_key] = not st.session_state[comment_key]
 
-    # ✏️ 게시글 수정 / 🗑️ 삭제 (작성자 전용)
+    # 댓글 창 (토글 상태에 따라 표시)
+    if st.session_state[comment_key]:
+        st.markdown("--- ") # 구분선
+        for c in comments:
+            cnick = c.get("nickname", "익명")
+            ctext = c.get("text", "")
+            st.markdown(f"**{cnick}**: {ctext}")
+
+        if st.session_state.get("user"):
+            new_c = st.text_input("댓글 입력", key=k("comment_input"), placeholder="따뜻한 댓글을 남겨주세요.")
+            if st.button("등록", key=k("comment_btn"), use_container_width=True):
+                ctext = (new_c or "").strip()
+                if ctext:
+                    add_comment(st.session_state.user["id"], post_id, ctext)
+                    add_notification(
+                        to_user_id=author_user_id,
+                        notif_type="comment",
+                        from_user_id=st.session_state.user["id"],
+                        post_id=post_id,
+                    )
+                    # 댓글 등록 후, 토글 닫고 새로고침
+                    st.session_state[comment_key] = False
+                    st.rerun()
+        else:
+            st.info("로그인 후 댓글을 작성할 수 있어요.")
+
+    # ✏️ 게시글 수정 / 🗑️ 삭제 (작성자 전용, 기존 expander 유지)
     is_owner = bool(st.session_state.get("user")) and (st.session_state.user["id"] == author_user_id)
     if is_owner:
         with st.expander("✏️ 게시글 수정 / 🗑️ 삭제"):
@@ -200,27 +239,3 @@ def ui_post_card(row, key_prefix: str = "card"):
                         st.rerun()
                     else:
                         st.error("삭제 권한이 없어요.")
-
-    # 댓글
-    with st.expander("💬 댓글 보기/쓰기"):
-        comments = list_comments(post_id) or []
-        for c in comments:
-            cnick = c["nickname"] if "nickname" in c.keys() else "익명"
-            ctext = c["text"] if "text" in c.keys() else ""
-            st.markdown(f"**{cnick}**: {ctext}")
-
-        if st.session_state.get("user"):
-            new_c = st.text_input("댓글 입력", key=k("comment_input"))
-            if st.button("등록", key=k("comment_btn")):
-                ctext = (new_c or "").strip()
-                if ctext:
-                    add_comment(st.session_state.user["id"], post_id, ctext)
-                    add_notification(
-                        to_user_id=author_user_id,
-                        notif_type="comment",
-                        from_user_id=st.session_state.user["id"],
-                        post_id=post_id,
-                    )
-                    st.rerun()
-        else:
-            st.info("로그인 후 댓글을 작성할 수 있어요.")
