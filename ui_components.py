@@ -80,21 +80,22 @@ def ui_post_card(row, key_prefix: str = "card"):
 
     st.markdown("---")
 
-    # 상단 메타(프로필)
-    meta_l, meta_r = st.columns([1, 5])
-    with meta_l:
+    # 상단 메타(프로필) - 새 레이아웃
+    p_col1, p_col2, p_col3 = st.columns([1, 3, 2])
+    with p_col1:
         if profile_img:
             _safe_show_image(profile_img, width=48)
-        st.caption(f"{nickname}")
-    with meta_r:
-        # ✅ 제목/작가: h3, 중앙 정렬
-        if book_title or book_author:
-            st.markdown(
-                f"<h3 style='text-align:center;margin:0.2rem 0 0.6rem 0;font-weight:700;'>{book_title} | 작가: {book_author}</h3>",
-                unsafe_allow_html=True,
-            )
-        if created_at:
-            st.caption(created_at)
+    with p_col2:
+        st.markdown(f"<div style='height: 48px; display: flex; align-items: center;'><b>{nickname}</b></div>", unsafe_allow_html=True)
+    with p_col3:
+        st.markdown(f"<div style='height: 48px; display: flex; align-items: center; justify-content: flex-end; text-align: right;'><small>{created_at}</small></div>", unsafe_allow_html=True)
+
+    # 제목/작가
+    if book_title or book_author:
+        st.markdown(
+            f"<h3 style='text-align:center;margin:0.8rem 0;font-weight:700;'>{book_title} | 작가: {book_author}</h3>",
+            unsafe_allow_html=True,
+        )
 
     # ✅ 페이지 전환: 버튼 2개(한 줄 배열)
     page_key = k("page_mode")
