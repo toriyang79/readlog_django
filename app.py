@@ -57,6 +57,7 @@ def main():
           /* --- Force columns to stay horizontal on mobile --- */
           div[data-testid="stHorizontalBlock"] {
               flex-wrap: nowrap !important;
+              gap: 0.5rem; /* 버튼 사이 간격 추가 */
           }
           /* --- Allow columns to shrink on mobile --- */
           div[data-testid="stHorizontalBlock"] > div {

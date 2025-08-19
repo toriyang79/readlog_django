@@ -55,6 +55,33 @@ def _looks_like_valid_image(url: str) -> bool:
         return False
     return False
 
+def _google_books_cover(isbn: str) -> str:
+    """
+    Google Books API를 통해 고해상도 커버 URL을 조회.
+    - API 키 없이 사용 가능하지만, 속도나 안정성은 보장되지 않음.
+    """
+    if not isbn:
+        return ""
+    try:
+        url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}"
+        resp = requests.get(url, timeout=5)
+        if resp.status_code != 200:
+            return ""
+        data = resp.json()
+        items = data.get("items", [])
+        if not items:
+            return ""
+        
+        # 가장 해상도가 높은 순서대로 링크를 찾음
+        img_links = items[0].get("volumeInfo", {}).get("imageLinks", {})
+        for size in ["extraLarge", "large", "medium", "small", "thumbnail"]:
+            if size in img_links:
+                # HTTP를 HTTPS로 변경
+                return img_links[size].replace("http://", "https://")
+    except Exception:
+        return ""
+    return ""
+
 def search_books(query: str, size: int = 10):
     """제목/ISBN 자동 판단해서 카카오에서 책 검색한 뒤, 고화질 커버(URL)까지 구성."""
     q = (query or "").strip()
@@ -95,10 +122,15 @@ def search_books(query: str, size: int = 10):
         # 카카오 썸네일(작은 편)
         kakao_thumb = (d.get("thumbnail") or "").strip()
 
-        # ISBN이 있으면 OpenLibrary 고해상도 커버 우선 사용하되,
-        # 실제로 유효하지 않으면(1x1 등) 카카오 썸네일로 폴백
-        hq_cover = _openlibrary_cover(isbn) if isbn else ""
-        cover_url = hq_cover if _looks_like_valid_image(hq_cover) else kakao_thumb
+        # --- 커버 이미지 결정 로직 (화질 개선) ---
+        # 1. OpenLibrary (고화질)
+        # 2. Google Books (고화질)
+        # 3. Kakao (썸네일)
+        cover_url = _openlibrary_cover(isbn) if isbn else ""
+        if not _looks_like_valid_image(cover_url):
+            cover_url = _google_books_cover(isbn) if isbn else ""
+            if not _looks_like_valid_image(cover_url):
+                cover_url = kakao_thumb # 최종 폴백
 
         results.append(
             {

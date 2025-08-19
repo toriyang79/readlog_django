@@ -114,16 +114,12 @@ def ui_post_card(row, key_prefix: str = "card"):
     # ✅ 이미지 표시: 반응형(모바일 최적화)
     if page_mode == "photo":
         if user_photo_url:
-            c1, c2, c3 = st.columns([1, 4, 1])
-            with c2:
-                _safe_show_image(user_photo_url, fit_to_column=True)
+            _safe_show_image(user_photo_url, fit_to_column=True)
         else:
             st.info("사진이 없어요.")
     else:
         if book_cover_snapshot:
-            c1, c2, c3 = st.columns([1, 4, 1])
-            with c2:
-                _safe_show_image(book_cover_snapshot, fit_to_column=True)
+            _safe_show_image(book_cover_snapshot, fit_to_column=True)
         else:
             st.info("책 표지 없음")
 
