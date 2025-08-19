@@ -58,6 +58,11 @@ def main():
           div[data-testid="stHorizontalBlock"] {
               flex-wrap: nowrap !important;
           }
+          /* --- Allow columns to shrink on mobile --- */
+          div[data-testid="stHorizontalBlock"] > div {
+              flex-shrink: 1 !important;
+              min-width: 0 !important;
+          }
         </style>
         """,
         unsafe_allow_html=True,
