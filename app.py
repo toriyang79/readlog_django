@@ -29,14 +29,19 @@ NAV_LABELS = {
 
 
 def main():
-    # 디렉터리/DB 보장
-    ensure_dirs()
-    init_db()
+    # 디렉터리/DB 보장 (앱 세션당 1회만 실행)
+    if "db_initialized" not in st.session_state:
+        ensure_dirs()
+        init_db()
+        st.session_state.db_initialized = True
 
     # 세션 기본값
     st.session_state.setdefault("user", None)
     st.session_state.setdefault("unread_count", 0)
     st.session_state.setdefault("nav", "feed")  # ← 현재 화면 상태
+    st.session_state.setdefault("search_results", []) # Added
+    st.session_state.setdefault("selected_book", None) # Added
+    st.session_state.setdefault("book_query", "") # Added
 
     # 스타일 (라디오를 탭처럼 보이게)
     st.markdown(

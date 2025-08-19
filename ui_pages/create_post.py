@@ -17,8 +17,6 @@ def page_create_post():
         return
 
     # --- 세션 변수 초기화 ---
-    st.session_state.setdefault("search_results", [])
-    st.session_state.setdefault("selected_book", None)
     st.session_state.setdefault("posting", False)
 
     # --- 카카오 책 검색(제목 또는 ISBN) ---

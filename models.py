@@ -4,6 +4,7 @@
 # ============================
 import os
 import csv
+import streamlit as st
 from db import get_conn
 from utils import now_str, hash_password
 
@@ -66,6 +67,7 @@ def get_user_by_email(email):
 # -----------------------------
 # 알림 관련
 # -----------------------------
+@st.cache_data
 def unread_notifications_count(user_id):
     conn = get_conn()
     cur = conn.cursor()
@@ -133,8 +135,8 @@ def create_post(user_id, book_id, user_photo_url, book_cover_url_snapshot, text)
             (user_id, book_id, user_photo_url, book_cover_url_snapshot, text, now_str()),
         )
     conn.close()
-    export_posts_to_csv()  # ✅ CSV 미러 저장
 
+@st.cache_data
 def list_posts(limit=50, offset=0, sort: str = "latest"):
     """피드용 목록.
     - sort == "latest": 최신순
@@ -163,6 +165,7 @@ def list_posts(limit=50, offset=0, sort: str = "latest"):
     conn.close()
     return rows
 
+@st.cache_data
 def top_bookup_posts(limit: int = 5):
     """사이드바용: BookUp 많은 게시물 상위 N개.
     제목, 닉네임, repost_count, post_id 포함
@@ -212,7 +215,6 @@ def update_post(user_id, post_id, new_text=None, new_user_photo_url=None):
     with conn:
         conn.execute(f"UPDATE posts SET {', '.join(sets)} WHERE id=?", vals)
     conn.close()
-    export_posts_to_csv()  # ✅ CSV 미러 저장
     return True
 
 def delete_post(user_id, post_id):
@@ -231,7 +233,6 @@ def delete_post(user_id, post_id):
     with conn:
         conn.execute("DELETE FROM posts WHERE id=?", (post_id,))
     conn.close()
-    export_posts_to_csv()  # ✅ CSV 미러 저장
     return True
 
 # -----------------------------
@@ -251,7 +252,6 @@ def toggle_like(user_id, post_id):
                 (post_id,),
             )
         conn.close()
-        export_posts_to_csv()  # ✅ 좋아요 수 변경 반영
         return False  # 좋아요 취소됨
     else:
         with conn:
@@ -261,7 +261,6 @@ def toggle_like(user_id, post_id):
             )
             conn.execute("UPDATE posts SET like_count = like_count + 1 WHERE id=?", (post_id,))
         conn.close()
-        export_posts_to_csv()  # ✅ 좋아요 수 변경 반영
         return True  # 좋아요 추가됨
 
 def do_repost(user_id, post_id):
@@ -280,7 +279,7 @@ def do_repost(user_id, post_id):
         )
         conn.execute("UPDATE posts SET repost_count = repost_count + 1 WHERE id=?", (post_id,))
     conn.close()
-    export_posts_to_csv()  # ✅ 리포스트 수 변경 반영
+    
     return True
 
 # -----------------------------
@@ -296,6 +295,7 @@ def add_comment(user_id, post_id, text):
     conn.close()
     # 댓글 수는 CSV에 포함하지 않으므로 미러 생략(원하면 여기서도 export 호출 가능)
 
+@st.cache_data
 def list_comments(post_id):
     conn = get_conn()
     cur = conn.cursor()
@@ -316,6 +316,7 @@ def list_comments(post_id):
 # -----------------------------
 # 프로필용 쿼리
 # -----------------------------
+@st.cache_data
 def my_posts(user_id):
     conn = get_conn()
     cur = conn.cursor()
@@ -338,6 +339,7 @@ def my_posts(user_id):
     conn.close()
     return rows
 
+@st.cache_data
 def my_reposts(user_id):
     conn = get_conn()
     cur = conn.cursor()

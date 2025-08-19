@@ -33,15 +33,11 @@ def _safe_show_image(src: str, width: int = None, center: bool = True, fit_to_co
     if src.startswith(("http://", "https://")):
         src_attr = src
     elif os.path.exists(src):
-        try:
-            with open(src, "rb") as f:
-                content = f.read()
-            b64_string = base64.b64encode(content).decode()
-            mimetype = "image/jpeg" if src.lower().endswith(('.jpg', '.jpeg')) else "image/png"
-            src_attr = f"data:{mimetype};base64,{b64_string}"
-        except Exception as e:
-            st.warning(f"이미지를 읽는 중 문제가 생겼어요: {e}")
+        b64_string, mimetype = _get_image_data_for_cache(src)
+        if b64_string is None:
+            st.info(f"이미지 파일을 찾을 수 없어요: {src}")
             return
+        src_attr = f"data:{mimetype};base64,{b64_string}"
     else:
         st.info(f"이미지 파일을 찾을 수 없어요: {src}")
         return

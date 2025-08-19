@@ -41,19 +41,22 @@ def _set_session_user(row):
     }
 
 def ui_auth():
-    # ✅ 쿠키 매니저 준비(함수 안에서)
-    cookies = EncryptedCookieManager(prefix="readlog_", password=_cookie_password())
+    # ✅ 쿠키 매니저 준비 (세션당 1회만 초기화)
+    if "cookies" not in st.session_state:
+        st.session_state.cookies = EncryptedCookieManager(prefix="readlog_", password=_cookie_password())
+    cookies = st.session_state.cookies
+
     if not cookies.ready():
         st.warning("쿠키를 준비 중입니다. 잠시 후 새로고침 해주세요.")
         st.stop()
 
     # 기본 세션 키
-    st.session_state.setdefault("user", None)
-    st.session_state.setdefault("unread_count", 0)
+    # st.session_state.setdefault("user", None) # Moved to app.py
+    # st.session_state.setdefault("unread_count", 0) # Moved to app.py
 
     # 🔁 쿠키(user_id)로 자동 로그인 복원
     if st.session_state.user is None:
-        uid = cookies.get("user_id")
+        uid = st.session_state.cookies.get("user_id")
         if uid:
             try:
                 uid = str(uid).strip()
@@ -87,10 +90,10 @@ def ui_auth():
             st.session_state.unread_count = 0
 
             # 2) 쿠키 확실히 비우기
-            cookies["user_id"] = ""        # 빈 값으로 덮어쓰기
-            if "user_id" in cookies:       # 키 자체 삭제
-                del cookies["user_id"]
-            cookies.save()
+            st.session_state.cookies["user_id"] = ""        # 빈 값으로 덮어쓰기
+            if "user_id" in st.session_state.cookies:       # 키 자체 삭제
+                del st.session_state.cookies["user_id"]
+            st.session_state.cookies.save()
 
             st.success("로그아웃되었습니다.")
             st.rerun()
@@ -109,8 +112,8 @@ def ui_auth():
             row = get_user_by_email(email)
             if row and row["password_hash"] == hash_password(pw):
                 _set_session_user(row)
-                cookies["user_id"] = str(row["id"])  # ✅ 쿠키 저장
-                cookies.save()
+                st.session_state.cookies["user_id"] = str(row["id"])  # ✅ 쿠키 저장
+                st.session_state.cookies.save()
                 st.success("로그인 성공!")
                 st.rerun()
             else:

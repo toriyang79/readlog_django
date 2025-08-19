@@ -82,6 +82,7 @@ def _google_books_cover(isbn: str) -> str:
         return ""
     return ""
 
+@st.cache_data
 def search_books(query: str, size: int = 10):
     """제목/ISBN 자동 판단해서 카카오에서 책 검색한 뒤, 고화질 커버(URL)까지 구성."""
     q = (query or "").strip()

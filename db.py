@@ -127,6 +127,13 @@ CREATE TABLE IF NOT EXISTS notifications (
   FOREIGN KEY(from_user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_books_title_author ON books (title, author);
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_repost_count ON posts (repost_count DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts (user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments (post_id);
+CREATE INDEX IF NOT EXISTS idx_reposts_user_id ON reposts (user_id);
 """
 
 def ensure_dirs() -> None:
