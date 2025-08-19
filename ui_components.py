@@ -2,6 +2,7 @@
 # ui_components.py  (공용 UI: 포스트 카드)
 # ============================
 import streamlit as st
+import base64
 import os
 from PIL import Image
 from storage import save_uploaded_image
