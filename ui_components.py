@@ -179,8 +179,8 @@ def ui_post_card(row, key_prefix: str = "card"):
     if st.session_state[comment_key]:
         st.markdown("--- ") # 구분선
         for c in comments:
-            cnick = c.get("nickname", "익명")
-            ctext = c.get("text", "")
+            cnick = _get(c, "nickname", "익명")
+            ctext = _get(c, "text", "")
             st.markdown(f"**{cnick}**: {ctext}")
 
         if st.session_state.get("user"):
