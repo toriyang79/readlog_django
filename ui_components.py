@@ -115,7 +115,10 @@ def ui_post_card(row, key_prefix: str = "card"):
             st.info("사진이 없어요.")
     else:
         if book_cover_snapshot:
-            _safe_show_image(book_cover_snapshot, fit_to_column=True)
+            # fit_to_column=False로 원본 크기 표시, columns로 중앙 정렬
+            c1, c2, c3 = st.columns([1,2,1])
+            with c2:
+                _safe_show_image(book_cover_snapshot, fit_to_column=False)
         else:
             st.info("책 표지 없음")
 
