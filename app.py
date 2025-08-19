@@ -123,7 +123,11 @@ def main():
             st.rerun()
     with col_w:
         if st.button("📝 글쓰기", use_container_width=True, type=("primary" if cur_nav == "write" else "secondary")):
+            # 글쓰기 페이지로 이동 시, 이전 검색 기록 초기화
             st.session_state["nav"] = "write"
+            st.session_state.search_results = []
+            st.session_state.selected_book = None
+            st.session_state.book_query = ""
             st.rerun()
     with col_p:
         if st.button("👤 프로필", use_container_width=True, type=("primary" if cur_nav == "profile" else "secondary")):
