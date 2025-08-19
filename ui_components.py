@@ -125,7 +125,7 @@ def ui_post_card(row, key_prefix: str = "card"):
 
     # 닉네임(볼드) + 텍스트
     if text or nickname:
-        st.markdown(f"**{nickname}** {text if text else ''}")
+        st.markdown(f"**{nickname}** {(text.replace('\n', '<br>') if text else '')}", unsafe_allow_html=True)
 
     # --- 액션 버튼 및 댓글 (모바일 최적화) ---
     comments = list_comments(post_id) or []
