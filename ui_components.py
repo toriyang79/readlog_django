@@ -28,6 +28,7 @@ def _safe_show_image(src: str, width: int = None, center: bool = True, fit_to_co
         st.info("이미지 파일이 없어요.")
         return
 
+    # 1. 소스 결정 (URL or Base64)
     src_attr = ""
     if src.startswith(("http://", "https://")):
         src_attr = src
@@ -36,7 +37,6 @@ def _safe_show_image(src: str, width: int = None, center: bool = True, fit_to_co
             with open(src, "rb") as f:
                 content = f.read()
             b64_string = base64.b64encode(content).decode()
-            # 파일 확장자에 따라 mimetype 설정 (간단한 버전)
             mimetype = "image/jpeg" if src.lower().endswith(('.jpg', '.jpeg')) else "image/png"
             src_attr = f"data:{mimetype};base64,{b64_string}"
         except Exception as e:
@@ -46,12 +46,16 @@ def _safe_show_image(src: str, width: int = None, center: bool = True, fit_to_co
         st.info(f"이미지 파일을 찾을 수 없어요: {src}")
         return
 
+    # 2. 상황에 맞게 이미지 렌더링
     if fit_to_column:
-        # CSS 클래스를 이용해 반응형 크기 조절
+        # 게시물 사진: CSS 클래스로 반응형 크기 조절
         st.markdown(f"<img src='{src_attr}' class='post-image'>", unsafe_allow_html=True)
-    else:
-        # 기존 로직 (주로 프로필 아바타용)
+    elif width:
+        # 아바타: 고정 폭 이미지
         st.image(src, width=width)
+    else:
+        # 책 표지: 원본 크기 + 중앙 정렬
+        st.markdown(f"<div style='text-align: center;'><img src='{src_attr}' style='max-width: 100%;'></div>", unsafe_allow_html=True)
 
 def ui_post_card(row, key_prefix: str = "card"):
     from models import toggle_like, do_repost, list_comments, add_comment, add_notification
