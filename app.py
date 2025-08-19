@@ -53,6 +53,11 @@ def main():
             background: #eef2ff; border-color:#6366f1; color:#3730a3;
             box-shadow: 0 1px 0 0 #ef4444 inset;
           }
+
+          /* --- Force columns to stay horizontal on mobile --- */
+          div[data-testid="stHorizontalBlock"] {
+              flex-wrap: nowrap !important;
+          }
         </style>
         """,
         unsafe_allow_html=True,
