@@ -19,44 +19,38 @@ def _get(row, key, default=None):
         val = default
     return default if val is None else val
 
-# ✅ 로컬 경로/URL 모두 안전하게 표시 (경로 깨짐, 읽기 실패 방지)
 def _safe_show_image(src: str, width: int = None, center: bool = True, fit_to_column: bool = False):
     """로컬 경로/URL 모두 안전하게 표시.
-    - fit_to_column=True: 가로폭 100%로 반응형 표시(모바일 최적화)
-    - width가 지정되면 해당 픽셀로 표시
+    - fit_to_column=True: PC에서는 최대 400px, 모바일에서는 꽉 차게 반응형 표시
     """
     if not src:
         st.info("이미지 파일이 없어요.")
         return
-    src = str(src).replace("\\", "/")
-    try:
-        if src.startswith(("http://", "https://")):
-            if fit_to_column:
-                style = "max-width:100%;width:100%;height:auto;"
-                html = f"<p style='text-align:{'center' if center else 'left'};margin:0;'><img src='{src}' style='{style}'></p>"
-                st.markdown(html, unsafe_allow_html=True)
-            else:
-                if center:
-                    st.markdown(
-                        f"<p style='text-align:center; margin:0;'><img src='{src}' {('width=\''+str(width)+'\'' ) if width else ''}></p>",
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.image(src, width=width)
+
+    src_attr = ""
+    if src.startswith(("http://", "https://")):
+        src_attr = src
+    elif os.path.exists(src):
+        try:
+            with open(src, "rb") as f:
+                content = f.read()
+            b64_string = base64.b64encode(content).decode()
+            # 파일 확장자에 따라 mimetype 설정 (간단한 버전)
+            mimetype = "image/jpeg" if src.lower().endswith(('.jpg', '.jpeg')) else "image/png"
+            src_attr = f"data:{mimetype};base64,{b64_string}"
+        except Exception as e:
+            st.warning(f"이미지를 읽는 중 문제가 생겼어요: {e}")
             return
-        # 로컬 파일
-        if os.path.exists(src):
-            with Image.open(src) as img:
-                if fit_to_column:
-                    st.image(img, use_column_width=True)
-                else:
-                    # st.image는 좌측 정렬되므로, 중앙정렬이 필요하면
-                    # 바깥에서 columns([1,2,1])로 감싸 호출하세요.
-                    st.image(img, width=width)
-        else:
-            st.info(f"이미지 파일을 찾을 수 없어요: {src}")
-    except Exception as e:
-        st.warning(f"이미지를 표시하는 중 문제가 생겼어요: {e}")
+    else:
+        st.info(f"이미지 파일을 찾을 수 없어요: {src}")
+        return
+
+    if fit_to_column:
+        # CSS 클래스를 이용해 반응형 크기 조절
+        st.markdown(f"<img src='{src_attr}' class='post-image'>", unsafe_allow_html=True)
+    else:
+        # 기존 로직 (주로 프로필 아바타용)
+        st.image(src, width=width)
 
 def ui_post_card(row, key_prefix: str = "card"):
     from models import toggle_like, do_repost, list_comments, add_comment, add_notification

@@ -72,6 +72,21 @@ def main():
               padding: 0.5rem 0.25rem; /* Adjust vertical/horizontal padding */
               height: 3rem; /* Enforce a consistent height */
           }
+        /* --- Post Image Styling --- */
+          .post-image {
+              width: 100%;
+              height: auto;
+              max-width: 400px; /* Max width on PC */
+              display: block;
+              margin-left: auto;
+              margin-right: auto;
+          }
+          @media (max-width: 640px) { /* Streamlit's mobile breakpoint */
+              .post-image {
+                  max-width: 100%; /* Full width on mobile */
+              }
+          }
+
         </style>
         """,
         unsafe_allow_html=True,
