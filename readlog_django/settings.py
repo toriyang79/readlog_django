@@ -21,7 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+# Prefer a local development key if present; otherwise use env var.
+try:
+    from .local_settings import SECRET_KEY as LOCAL_SECRET_KEY  # type: ignore
+except Exception:
+    LOCAL_SECRET_KEY = None
+
+# If the environment variable is unset or empty, fall back to local key
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or LOCAL_SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -136,3 +143,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Local overrides (e.g., SECRET_KEY) for development
+# This allows keeping secrets out of version control while running locally.
+try:
+    from .local_settings import *  # type: ignore
+except Exception:
+    # If no local overrides exist, proceed with the base settings
+    pass
