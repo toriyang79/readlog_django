@@ -31,52 +31,16 @@
 - 알림(Notification) 기능 (좋아요, 책갈피, 댓글 시 알림 전송)
 
 ### 3. **UI/UX**
-- Streamlit 기반의 직관적인 인터페이스
 - 버튼/이미지 크기 및 정렬 최적화
 - 제목·작가 표기 형식: `제목: 바다가 들리는 편의점 | 작가: 마치다 소노코`
 
+--
+
+
+외부 API: Kakao Book Search + OpenLibrary 커버 폴백, URL 유효성 경량 검사
 ---
 
-## 🛠 기술 스택
 
-Frontend/UI: Streamlit (단일 페이지 라우팅, 라디오 내비를 탭처럼 스타일링)
-
-Backend/DB: SQLite + SQL(외래키 활성화), 스키마 보장 실행(재실행 안전)
-
-이미지 처리: Pillow(PIL)로 JPEG 변환 저장(quality=90)
-
-인증/세션: SHA-256 비밀번호 해시, EncryptedCookieManager로 암호화 쿠키 로그인 복원
-
-외부 API: Kakao Book Search + OpenLibrary 커버 폴백, URL 유효성 경량 검사(HEAD/소량 GET)
----
-
-## 📂 디렉토리 구조
-```
-readlog/
-├── app.py                 # 메인 실행(라디오 내비)
-├── auth_ui.py             # 로그인/회원가입 + 쿠키 로그인 복원
-├── book_utils.py          # 카카오 도서 검색 + 커버 폴백
-├── db.py                  # DB 경로 고정(data/readlog.db) + 스키마 보장
-├── models.py              # DB 액션(글/좋아요/리포스트/댓글) + CSV 미러
-├── storage.py             # 이미지 저장(data/uploads/…, JPEG 변환)
-├── ui_components.py       # 카드 UI(좋아요/리포스트/댓글/수정/삭제)
-├── utils.py               # now_str, 해시 등 유틸
-├── requirements.txt       # 의존성 목록
-├── README.md              # 프로젝트 설명 문서
-├── ui_pages/              # 화면별 페이지
-│   ├── __init__.py
-│   ├── create_post.py     # 글쓰기(업로드 후 자동 피드 이동)
-│   ├── feed.py            # 피드(최신 50)
-│   └── profile.py         # 내 글/리포스트
-├── data/                  # 영구 저장소(앱이 자동 생성)
-│   ├── readlog.db         # SQLite DB
-│   ├── posts.csv          # 게시글 CSV 미러(자동 갱신)
-│   └── uploads/           # 업로드 이미지 폴더
-│       └── ...            # 이미지 파일들
-├── .gitignore
-└── (legacy) data.db       # 예전 경로 사용분(이제 미사용, 백업 후 삭제 권장)
-
----
 ```
 
 ## 📦 사용법
@@ -89,52 +53,15 @@ readlog/
 
 좋아요/리포스트/댓글: 버튼 클릭 시 DB 업데이트 및 알림 전송, 화면은 즉시 갱신됩니다.
 
----
-## 🚀 로컬에서 실행하는 방법
-0. 준비물
-
-Python 3.10 이상 (권장: 3.11~3.12)
-카카오 도서 API 키 → KAKAO_API_KEY (필수)
-(선택) 자동 로그인 암호화 키 → COOKIE_PASSWORD (16자 이상 임의 문자열)
-
-1. 프로젝트 받기
-
-git clone <repo-url> readlog
-cd readlog
 
 
-2. 가상환경 만들기 & 켜기
 
-Windows (PowerShell)
-
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-
-
-macOS / Linux
-
-python3 -m venv .venv
-source .venv/bin/activate
-
-
-3. 패키지 설치
-
-pip install -r requirements.txt
-
-
-4. API 키 설정(가장 쉬운 방법)
-프로젝트 루트에 .streamlit/secrets.toml 파일 만들고 아래 내용 저장:
+4. API 키 설정
 
 KAKAO_API_KEY = "카카오_REST_API_키"
 COOKIE_PASSWORD = "원하는_아무_문자열_16자_이상"
 
-
-5. 실행
-
-streamlit run app.py
-
-
-처음 실행하면 data/readlog.db, data/uploads/, data/posts.csv가 자동 생성됩니다.
+\
 
 ## 🚀 향후 개발 계획
 - 📚 책 정보 자동 불러오기 (교보문고/알라딘 API 연동)

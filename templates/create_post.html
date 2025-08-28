@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="mb-4">Create Post</h1>
+
+<div class="mb-4">
+    <h2>Search Book</h2>
+    <form method="GET" action="{% url 'create_post' %}">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Search by title or author" name="query" value="{{ request.GET.query }}">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+    </form>
+
+    {% if search_results %}
+    <h3 class="mt-4">Search Results</h3>
+    <div class="list-group">
+        {% for book in search_results %}
+        <a href="#" class="list-group-item list-group-item-action"
+           data-title="{{ book.title }}"
+           data-author="{{ book.author }}"
+           data-cover="{{ book.cover_url }}"
+           data-isbn="{{ book.isbn }}">
+            <strong>{{ book.title }}</strong> by {{ book.author }}
+            {% if book.cover_url %}<img src="{{ book.cover_url }}" alt="Cover" style="width: 50px; margin-left: 10px;">{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% elif request.GET.query %}
+    <p>No results found for "{{ request.GET.query }}".</p>
+    {% endif %}
+</div>
+
+<hr>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="text" class="form-label">Post Text</label>
+        <textarea class="form-control" id="text" name="text" rows="3" required></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="book_title" class="form-label">Book Title (Optional)</label>
+        <input type="text" class="form-control" id="book_title" name="book_title">
+    </div>
+    <div class="mb-3">
+        <label for="book_author" class="form-label">Book Author (Optional)</label>
+        <input type="text" class="form-control" id="book_author" name="book_author">
+    </div>
+    <div class="mb-3">
+        <label for="book_cover_url" class="form-label">Book Cover URL (Optional)</label>
+        <input type="url" class="form-control" id="book_cover_url" name="book_cover_url">
+    </div>
+    <div class="mb-3">
+        <label for="user_photo" class="form-label">Your Photo (Optional)</label>
+        <input type="file" class="form-control" id="user_photo" name="user_photo" accept="image/*">
+    </div>
+    <button type="submit" class="btn btn-primary">Create Post</button>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchResultLinks = document.querySelectorAll('.list-group-item-action');
+        searchResultLinks.forEach(link => {
+            link.addEventListener('click', function(event) {
+                event.preventDefault();
+                document.getElementById('book_title').value = this.dataset.title;
+                document.getElementById('book_author').value = this.dataset.author;
+                document.getElementById('book_cover_url').value = this.dataset.cover;
+                // Optionally, you can also set ISBN if you add an input for it
+                // document.getElementById('book_isbn').value = this.dataset.isbn;
+            });
+        });
+    });
+</script>
+{% endblock %}

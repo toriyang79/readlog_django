@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="mb-4 text-center">Feed</h1>
+
+{% for post in posts %}
+<div class="card mb-3" style="max-width: 600px; margin: 0 auto;">
+    <div class="card-header d-flex align-items-center">
+        {% if post.user.profile.profile_image %}
+        <img src="{{ post.user.profile.profile_image.url }}" class="rounded-circle me-2" alt="Profile Image" style="width: 40px; height: 40px; object-fit: cover;">
+        {% endif %}
+        <div>
+            <h5 class="mb-0">{{ post.user.profile.nickname }}</h5>
+            <small class="text-muted">{{ post.created_at|date:"Y-m-d H:i" }}</small>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="text-center" style="background-color: #f0f0f0; max-width: 600px; margin: 0 auto;">
+            {% if post.user_photo %}<img src="{{ post.user_photo.url }}" class="img-fluid post-image" alt="Post Photo" style="max-height: 400px; width: 100%; object-fit: contain;" data-post-id="{{ post.id }}" data-image-type="photo">{% endif %}
+            {% if post.book_cover_url_snapshot %}<img src="{{ post.book_cover_url_snapshot }}" class="img-fluid book-cover" alt="Book Cover" style="max-height: 400px; width: 100%; object-fit: contain; display: none;" data-post-id="{{ post.id }}" data-image-type="cover">{% endif %}
+        </div>
+    </div>
+    <div class="card-footer">
+        <p class="card-text">{{ post.text }}</p>
+        {% if post.book %}
+        <p class="card-text"><strong>Book:</strong> {{ post.book.title }} by {{ post.book.author }}</p>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <div>
+                {% if user.is_authenticated %}
+                <form action="{% url 'like_post' post.id %}" method="post" class="d-inline like-form" data-post-id="{{ post.id }}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm {% if post.is_liked %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                        <i class="bi bi-heart-fill"></i> BookLike (<span class="like-count">{{ post.like_count }}</span>)
+                    </button>
+                </form>
+                <form action="{% url 'toggle_repost' post.id %}" method="post" class="d-inline ms-2 repost-form" data-post-id="{{ post.id }}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm {% if post.is_reposted %}btn-success{% else %}btn-outline-success{% endif %}>">
+                        <i class="bi bi-bookmark-fill"></i> BookUp (<span class="repost-count">{{ post.repost_count }}</span>)
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% if post.user_photo or post.book_cover_url_snapshot %}
+            <div class="btn-group btn-group-sm" role="group" aria-label="Image Toggle">
+                {% if post.user_photo %}<button type="button" class="btn btn-outline-primary active" data-post-id="{{ post.id }}" data-toggle-type="photo">Photo</button>{% endif %}
+                {% if post.book_cover_url_snapshot %}<button type="button" class="btn btn-outline-primary {% if not post.user_photo %}active{% endif %}" data-post-id="{{ post.id }}" data-toggle-type="cover">BookCover</button>{% endif %}
+            </div>
+            {% endif %}
+            {% if user.is_authenticated and user.id == post.user.id %}
+            <div>
+                <a href="{% url 'edit_post' post.id %}" class="btn btn-sm btn-outline-secondary">✏️ Edit</a>
+                <a href="{% url 'delete_post' post.id %}" class="btn btn-sm btn-outline-danger">🗑️ Delete</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="comments-section mt-3" data-post-id="{{ post.id }}">
+            <h6>Comments:</h6>
+            <div class="comments-list" id="comments-list-{{ post.id }}">
+                <!-- Comments will be loaded here via AJAX -->
+            </div>
+            {% if user.is_authenticated %}
+            <form class="comment-form mt-2" data-post-id="{{ post.id }}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm" placeholder="Add a comment..." name="comment_text">
+                    <button type="submit" class="btn btn-primary btn-sm">Post</button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<p>No posts yet.</p>
+{% endfor %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-group-sm button').forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.dataset.postId;
+                const toggleType = this.dataset.toggleType;
+
+                // Deactivate all buttons for this post
+                document.querySelectorAll(`.btn-group-sm button[data-post-id="${postId}"]`).forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Activate clicked button
+                this.classList.add('active');
+
+                // Hide all images for this post
+                document.querySelectorAll(`img[data-post-id="${postId}"]`).forEach(img => {
+                    img.style.display = 'none';
+                });
+
+                // Show the selected image
+                document.querySelector(`img[data-post-id="${postId}"][data-image-type="${toggleType}"]`).style.display = 'block';
+            });
+        });
+
+        // AJAX for Like button
+        document.querySelectorAll('.like-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+
+                const postId = this.dataset.postId;
+                const csrfToken = this.querySelector('[name="csrfmiddlewaretoken"]').value;
+                const likeButton = this.querySelector('button');
+                const likeCountSpan = this.querySelector('.like-count');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        likeCountSpan.textContent = data.new_like_count;
+                        if (data.liked) {
+                            likeButton.classList.remove('btn-outline-danger');
+                            likeButton.classList.add('btn-danger');
+                        } else {
+                            likeButton.classList.remove('btn-danger');
+                            likeButton.classList.add('btn-outline-danger');
+                        }
+                    } else {
+                        alert(data.message); // Show error message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            });
+        });
+
+        // AJAX for Repost button
+        document.querySelectorAll('.repost-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+
+                const postId = this.dataset.postId;
+                const csrfToken = this.querySelector('[name="csrfmiddlewaretoken"]').value;
+                const repostButton = this.querySelector('button');
+                const repostCountSpan = this.querySelector('.repost-count');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        repostCountSpan.textContent = data.new_repost_count;
+                        if (data.reposted) {
+                            repostButton.classList.remove('btn-outline-success');
+                            repostButton.classList.add('btn-success');
+                        } else {
+                            repostButton.classList.remove('btn-success');
+                            repostButton.classList.add('btn-outline-success');
+                        }
+                    } else {
+                        alert(data.message); // Show error message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            });
+        });
+
+        // Comments functionality
+        function renderComment(comment) {
+            return `
+                <div class="comment-item border-bottom pb-2 mb-2">
+                    <strong>${comment.author}</strong> <small class="text-muted">${comment.created_at}</small>
+                    <p class="mb-0">${comment.text}</p>
+                </div>
+            `;
+        }
+
+        function loadComments(postId) {
+            fetch(`/post/${postId}/comments/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const commentsListDiv = document.getElementById(`comments-list-${postId}`);
+                        commentsListDiv.innerHTML = ''; // Clear existing comments
+                        data.comments.forEach(comment => {
+                            commentsListDiv.innerHTML += renderComment(comment);
+                        });
+                    } else {
+                        console.error('Failed to load comments:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading comments:', error);
+                });
+        }
+
+        // Load comments for all posts on page load
+        document.querySelectorAll('.comments-section').forEach(section => {
+            loadComments(section.dataset.postId);
+        });
+
+        // Handle comment form submission
+        document.querySelectorAll('.comment-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const postId = this.dataset.postId;
+                const csrfToken = this.querySelector('[name="csrfmiddlewaretoken"]').value;
+                const commentTextInput = this.querySelector('input[name="comment_text"]');
+                const commentText = commentTextInput.value;
+
+                if (!commentText.trim()) {
+                    alert('댓글 내용을 입력해주세요.');
+                    return;
+                }
+
+                fetch(`/post/${postId}/comment/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment_text: commentText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const commentsListDiv = document.getElementById(`comments-list-${postId}`);
+                        commentsListDiv.innerHTML += renderComment(data.comment);
+                        commentTextInput.value = ''; // Clear input
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding comment:', error);
+                    alert('댓글 추가 중 오류가 발생했습니다.');
+                });
+            });
+        });
+    });
+</script>
+
+{% endblock %}

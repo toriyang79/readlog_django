@@ -1,4 +1,4 @@
-streamlit==1.37.1
 Pillow==10.4.0
 requests==2.32.3
-streamlit-cookies-manager==0.2.0
+django==5.2.5
+whitenoise==6.7.0

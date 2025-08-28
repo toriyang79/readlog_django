@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="mb-4">{{ viewed_user.profile.nickname }}'s Profile</h1>
+
+{% if viewed_user.profile.profile_image %}
+<img src="{{ viewed_user.profile.profile_image.url }}" class="img-fluid rounded-circle mb-3" alt="Profile Image" style="width: 150px; height: 150px; object-fit: cover;">
+{% endif %}
+
+<div class="mb-3">
+    <p><strong>Followers:</strong> <span id="follower-count">{{ follower_count }}</span></p>
+    <p><strong>Following:</strong> <span id="following-count">{{ following_count }}</span></p>
+
+    {% if user.is_authenticated and user != viewed_user %}
+    <form action="{% url 'toggle_follow' viewed_user.id %}" method="post" class="d-inline follow-form" data-user-id="{{ viewed_user.id }}">
+        {% csrf_token %}
+        <button type="submit" class="btn {% if is_following %}btn-outline-secondary{% else %}btn-primary{% endif %}" id="follow-button">
+            {% if is_following %}Unfollow{% else %}Follow{% endif %}
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h2>내 포스팅</h2>
+        {% for post in my_posts %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ post.user.profile.nickname }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ post.created_at|date:"Y-m-d H:i" }}</h6>
+                {% if post.book %}
+                <p class="card-text"><strong>Book:</strong> {{ post.book.title }} by {{ post.book.author }}</p>
+                {% endif %}
+                <p class="card-text">{{ post.text }}</p>
+                <div class="text-center mb-2">
+                    {% if post.user_photo %}<img src="{{ post.user_photo.url }}" class="img-fluid mb-2 post-image" alt="Post Photo" style="max-height: 200px;" data-post-id="{{ post.id }}" data-image-type="photo">{% endif %}
+                    {% if post.book_cover_url_snapshot %}<img src="{{ post.book_cover_url_snapshot }}" class="img-fluid mb-2 book-cover" alt="Book Cover" style="max-height: 200px; display: none;" data-post-id="{{ post.id }}" data-image-type="cover">{% endif %}
+                </div>
+                {% if post.user_photo or post.book_cover_url_snapshot %}
+                <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Image Toggle">
+                    {% if post.user_photo %}<button type="button" class="btn btn-outline-primary active" data-post-id="{{ post.id }}" data-toggle-type="photo">Photo</button>{% endif %}
+                    {% if post.book_cover_url_snapshot %}<button type="button" class="btn btn-outline-primary {% if not post.user_photo %}active{% endif %}" data-post-id="{{ post.id }}" data-toggle-type="cover">Book Cover</button>{% endif %}
+                </div>
+                {% endif %}
+                <p class="card-text"><small class="text-muted">Likes: {{ post.like_count }} | Reposts: {{ post.repost_count }}</small></p>
+                {% if user.is_authenticated and user.id == post.user.id %}
+                <div class="mt-2">
+                    <a href="{% url 'edit_post' post.id %}" class="btn btn-sm btn-outline-secondary">✏️ Edit</a>
+                    <a href="{% url 'delete_post' post.id %}" class="btn btn-sm btn-outline-danger">🗑️ Delete</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p>No posts yet.</p>
+        {% endfor %}
+    </div>
+    <div class="col-md-6">
+        <h2>Book Up</h2>
+        {% for repost in my_reposts %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ repost.post.user.profile.nickname }} (Reposted)</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ repost.post.created_at|date:"Y-m-d H:i" }}</h6>
+                {% if repost.post.book %}
+                <p class="card-text"><strong>Book:</strong> {{ repost.post.book.title }} by {{ repost.post.book.author }}</p>
+                {% endif %}
+                <p class="card-text">{{ repost.post.text }}</p>
+                <div class="text-center mb-2">
+                    {% if repost.post.user_photo %}<img src="{{ repost.post.user_photo.url }}" class="img-fluid mb-2 post-image" alt="Repost Photo" style="max-height: 200px;" data-post-id="repost-{{ repost.id }}" data-image-type="photo">{% endif %}
+                    {% if repost.post.book_cover_url_snapshot %}<img src="{{ repost.post.book_cover_url_snapshot }}" class="img-fluid mb-2 book-cover" alt="Book Cover" style="max-height: 200px; display: none;" data-post-id="repost-{{ repost.id }}" data-image-type="cover">{% endif %}
+                </div>
+                {% if repost.post.user_photo or repost.post.book_cover_url_snapshot %}
+                <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Image Toggle">
+                    {% if repost.post.user_photo %}<button type="button" class="btn btn-outline-primary active" data-post-id="repost-{{ repost.id }}" data-toggle-type="photo">Photo</button>{% endif %}
+                    {% if repost.post.book_cover_url_snapshot %}<button type="button" class="btn btn-outline-primary {% if not repost.post.user_photo %}active{% endif %}" data-post-id="repost-{{ repost.id }}" data-toggle-type="cover">Book Cover</button>{% endif %}
+                </div>
+                {% endif %}
+                <p class="card-text"><small class="text-muted">Likes: {{ repost.post.like_count }} | Reposts: {{ repost.post.repost_count }}</small></p>
+            </div>
+        </div>
+        {% empty %}
+        <p>No reposts yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-group-sm button').forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.dataset.postId;
+                const toggleType = this.dataset.toggleType;
+
+                // Deactivate all buttons for this post
+                document.querySelectorAll(`.btn-group-sm button[data-post-id="${postId}"]`).forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Activate clicked button
+                this.classList.add('active');
+
+                // Hide all images for this post
+                document.querySelectorAll(`img[data-post-id="${postId}"]`).forEach(img => {
+                    img.style.display = 'none';
+                });
+
+                // Show the selected image
+                document.querySelector(`img[data-post-id="${postId}"][data-image-type="${toggleType}"]`).style.display = 'block';
+            });
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const followForm = document.querySelector('.follow-form');
+        if (followForm) {
+            followForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const userId = this.dataset.userId;
+                const csrfToken = this.querySelector('[name="csrfmiddlewaretoken"]').value;
+                const followButton = document.getElementById('follow-button');
+                const followerCountSpan = document.getElementById('follower-count');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        followerCountSpan.textContent = data.follower_count;
+                        if (data.followed) {
+                            followButton.classList.remove('btn-primary');
+                            followButton.classList.add('btn-outline-secondary');
+                            followButton.textContent = 'Unfollow';
+                        } else {
+                            followButton.classList.remove('btn-outline-secondary');
+                            followButton.classList.add('btn-primary');
+                            followButton.textContent = 'Follow';
+                        }
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            });
+        }
+    });
+</script>
+
+{% endblock %}
