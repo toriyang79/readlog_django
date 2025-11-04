@@ -30,10 +30,22 @@ except Exception:
 # If the environment variable is unset or empty, fall back to local key
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or LOCAL_SECRET_KEY
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def env_bool(name: str, default: bool = False) -> bool:
+    val = os.environ.get(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "t", "yes", "y", "on"}
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1'] # Add your production domain(s) here
+def env_list(name: str, default: list[str] | None = None) -> list[str]:
+    val = os.environ.get(name)
+    if not val:
+        return default or []
+    return [item.strip() for item in val.split(',') if item.strip()]
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = env_bool('DEBUG', default=True)
+
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])  # Add your production domain(s) here
 
 LOGIN_URL = 'login' # New: URL to redirect to for login
 LOGIN_REDIRECT_URL = 'feed'
@@ -83,6 +95,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'readlog_django.wsgi.application'
+
+# CSRF trusted origins (e.g., https://example.com)
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default=[])
 
 
 # Database
